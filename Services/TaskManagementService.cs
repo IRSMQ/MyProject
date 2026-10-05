@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.CodeAnalysis.Differencing;
 using Microsoft.EntityFrameworkCore;
-using Test26.Data;
+using Test26.Context;
 using Test26.DTOs;
 using Test26.Models;
 
@@ -22,13 +22,11 @@ public class TaskManagementService
             {
                 TaskManagementId = r.TaskManagementId,
                 ProjectId = r.ProjectId,
-                UserId = r.UserId,
                 StatusId = r.StatusId,
                 PriorityId = r.PriorityId,
                 ParentId = r.ParentId,
 
                 ProjectName = r.Project.ProjectName,
-                UserFullName = r.User != null ? r.User.UserFullName : null,
                 StatusName = r.Status.StatusName,
                 PriorityName = r.Priority.PriorityName,
                 ParentName = r.Parent != null ? r.Parent.Title : null,
@@ -52,7 +50,6 @@ public class TaskManagementService
     {
         var tm = await _projectManagementSystemContext.TaskManagements
             .Include(r => r.Project)
-            .Include(r => r.User)
             .Include(r => r.Status)
             .Include(r => r.Priority)
             .Include(r => r.Parent)
@@ -99,7 +96,6 @@ public class TaskManagementService
         var newTm = new TaskManagement
         {
             ProjectId = tMADto.ProjectId,
-            UserId = tMADto.UserId,
             StatusId = tMADto.StatusId,
             PriorityId = tMADto.PriorityId,
             ParentId = tMADto.ParentId,
@@ -115,7 +111,6 @@ public class TaskManagementService
 
         var saved = await _projectManagementSystemContext.TaskManagements
             .Include(r => r.Project)
-            .Include(r => r.User)
             .Include(r => r.Status)
             .Include(r => r.Priority)
             .Include(r => r.Parent)
@@ -124,31 +119,10 @@ public class TaskManagementService
         return TaskToDto(saved);
     }
 
-    public async Task<TaskManagementDto> EditUser(TaskEditObject taskEditObject)
-    {
-        var tm = await _projectManagementSystemContext.TaskManagements
-            .Include(r => r.Project)
-            .Include(r => r.User)
-            .Include(r => r.Status)
-            .Include(r => r.Priority)
-            .Include(r => r.Parent)
-            .FirstOrDefaultAsync(t => t.TaskManagementId == taskEditObject.TaskID);
-
-        if (tm == null)
-            throw new KeyNotFoundException("Task Not Found");
-
-        tm.UserId = taskEditObject.ObjectId;
-        
-        await _projectManagementSystemContext.SaveChangesAsync();
-
-        return TaskToDto(tm);
-    }
-
     public async Task<TaskManagementDto> Delete(Guid id)
     {
         var tm = await _projectManagementSystemContext.TaskManagements
             .Include(r => r.Project)
-            .Include(r => r.User)
             .Include(r => r.Status)
             .Include(r => r.Priority)
             .Include(r => r.Parent)
@@ -179,7 +153,6 @@ public class TaskManagementService
 
         var tm = await _projectManagementSystemContext.TaskManagements
             .Include(r => r.Project)
-            .Include(r => r.User)
             .Include(r => r.Status)
             .Include(r => r.Priority)
             .Include(r => r.Parent)
@@ -188,7 +161,7 @@ public class TaskManagementService
         if (tm == null)
             throw new KeyNotFoundException("Task Not Found");
 
-        if (tm.Project.StatusId == Guid.Parse("DB303C22-BB2F-438A-BDE0-401CFCA15B5C") && taskEditObject.ObjectId == Guid.Parse("8569E5B3-46BD-4070-BCC2-18AB1DC94F26"))
+        if (tm.Project != null && tm.Project.StatusId != null && tm.Project.StatusId == Guid.Parse("DB303C22-BB2F-438A-BDE0-401CFCA15B5C") && taskEditObject.ObjectId == Guid.Parse("8569E5B3-46BD-4070-BCC2-18AB1DC94F26"))
             throw new InvalidOperationException("When Project Complete, can't edit Task Status into InProgress");
 
         tm.StatusId = taskEditObject.ObjectId;
@@ -200,30 +173,6 @@ public class TaskManagementService
 
     public async Task<TaskManagementDto> Priority(TaskEditObject taskEditObject)
     {
-        /*
-        var tm = await _projectManagementSystemContext.TaskManagements
-            .Include(r => r.Project)
-            .Include(r => r.User)
-            .Include(r => r.Status)
-            .Include(r => r.Priority)
-            .Include(r => r.Parent)
-            .FirstOrDefaultAsync(t => t.TaskManagementId == taskEditObject.TaskID);
-
-        if(tm == null)
-            throw new KeyNotFoundException("Task Not Found");
-
-        var exist = await _projectManagementSystemContext.Priorities
-            .AnyAsync(a => a.PriorityId == taskEditObject.ObjectId);
-
-        if (!exist)
-            throw new InvalidOperationException("Priority Not Found");
-
-        tm.PriorityId = taskEditObject.ObjectId;
-        await _projectManagementSystemContext.SaveChangesAsync();
-
-        return TaskToDto(tm);
-        */
-
         return await Editing<Priority>(
             taskEditObject,
             p => p.PriorityId == taskEditObject.ObjectId,
@@ -442,7 +391,6 @@ public class TaskManagementService
 
         var tm = await _projectManagementSystemContext.TaskManagements
             .Include(r => r.Project)
-            .Include(r => r.User)
             .Include(r => r.Status)
             .Include(r => r.Priority)
             .Include(r => r.Parent)
@@ -463,13 +411,11 @@ public class TaskManagementService
         {
             TaskManagementId = taskManagement.TaskManagementId,
             ProjectId = taskManagement.ProjectId,
-            UserId = taskManagement.UserId,
             StatusId = taskManagement.StatusId,
             PriorityId = taskManagement.PriorityId,
             ParentId = taskManagement.ParentId,
 
             ProjectName = taskManagement.Project?.ProjectName,
-            UserFullName = taskManagement.User?.UserFullName,
             StatusName = taskManagement.Status?.StatusName,
             PriorityName = taskManagement.Priority?.PriorityName,
             ParentName = taskManagement.Parent?.Title,

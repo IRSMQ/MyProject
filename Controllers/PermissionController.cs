@@ -27,21 +27,17 @@ public class PermissionController : ControllerBase
         return Ok(ApiResponse<PermissionDto>.Success(await _permissionService.GetById(id),$"Get By ID"));
     }
 
-    [HttpPut("edit")]
-    public async Task<IActionResult> Edit([FromBody] PermissionDto permissionDto)
-    {
-        return Ok(ApiResponse<PermissionDto>.Success(await _permissionService.Edit(permissionDto),$"Edit Succeeded"));
-    }
-
     [HttpPost("add")]
     public async Task<IActionResult> Add([FromBody] PermissionAddDto permissionAddDto)
-    {
-        return Ok(ApiResponse<PermissionDto>.Success(await _permissionService.Add(permissionAddDto),$"Add Succeeded"));
-    }
+        => Ok(ApiResponse<PermissionDto>.Success(await _permissionService.Add(permissionAddDto),$"Add Succeeded"));
+
+    [HttpPut("edit")]
+    public async Task<IActionResult> Edit([FromBody] PermissionDto permissionDto)
+        => Ok(ApiResponse<PermissionDto>.Success(await _permissionService.Edit(permissionDto),$"Edit Succeeded"));
+
+    
 
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> Delete(Guid id)
-    {
-        return Ok(ApiResponse<PermissionDto>.Success(await _permissionService.Delete(id),$"Delete Succeeded"));
-    }
+        => Ok(ApiResponse<PermissionDto>.Success(await _permissionService.Delete(id),$"Delete Succeeded"));
 }

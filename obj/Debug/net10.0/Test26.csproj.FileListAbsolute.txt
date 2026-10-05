@@ -281,3 +281,4 @@ C:\Codes\CS\Tests\Test26\bin\Debug\net10.0\Microsoft.AspNetCore.OpenApi.dll
 C:\Codes\CS\Tests\Test26\bin\Debug\net10.0\Microsoft.OpenApi.dll
 C:\Codes\CS\Tests\Test26\bin\Debug\net10.0\Scalar.AspNetCore.dll
 C:\Codes\CS\Tests\Test26\obj\Debug\net10.0\Test26.MvcApplicationPartsAssemblyInfo.cs
+C:\Codes\CS\Tests\Test26\obj\Debug\net10.0\Test26.sourcelink.json

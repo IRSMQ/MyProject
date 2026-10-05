@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace Test26.Models;
 
-public partial class Project
+public partial class Project : ISoftDeletable
 {
-    public Guid ProjectId { get; set; } = Guid.NewGuid();
+    public Guid ProjectId { get; set; }
 
     public Guid? StatusId { get; set; }
 
@@ -17,7 +17,7 @@ public partial class Project
 
     public string? Desc { get; set; }
 
-    public DateTime CreationDate { get; set; } = DateTime.Now;
+    public DateTime CreationDate { get; set; }
 
     public DateTime? StartDate { get; set; }
 
@@ -25,10 +25,13 @@ public partial class Project
 
     public DateTime? EndDate { get; set; }
 
-    
+    public bool SoftDelete { get; set; }
 
-    public virtual Status Status { get; set; } = null!;
-    public virtual User Manager { get; set; } = null!;
-    public virtual Priority Priority { get; set; } = null!;
+    public virtual User? Manager { get; set; }
+
+    public virtual Priority? Priority { get; set; }
+
+    public virtual Status? Status { get; set; }
+
     public virtual ICollection<TaskManagement> TaskManagements { get; set; } = new List<TaskManagement>();
 }

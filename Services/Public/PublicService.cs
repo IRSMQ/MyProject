@@ -2,7 +2,8 @@ using System.ClientModel.Primitives;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Test26.Data;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Test26.Context;
 using Test26.EventS;
 
 namespace Test26.Service;
@@ -13,11 +14,11 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
     where TAddDto : class
 {
     protected readonly ProjectManagementSystemContext _projectManagementSystemContext;
-    protected readonly EventService _eventService;
-    protected PublicService(ProjectManagementSystemContext projectManagementSystemContext, EventService eventService)
+    protected readonly LogService _logService;
+    protected PublicService(ProjectManagementSystemContext projectManagementSystemContext, LogService logService)
     {
         _projectManagementSystemContext = projectManagementSystemContext;
-        _eventService = eventService;
+        _logService = logService;
     }
 
     protected abstract Guid GetId(TEntity entity);
@@ -37,6 +38,7 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
     {
         var list = await _projectManagementSystemContext
             .Set<TEntity>()
+            .Where(e => !((ISoftDeletable)e).SoftDelete)
             .Select(ToDto)
             .ToListAsync();
 
@@ -49,7 +51,7 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
     {
         var entity = await _projectManagementSystemContext
             .Set<TEntity>()
-            .FindAsync(id);
+            .FirstOrDefaultAsync(e => GetId(e) == id && !((ISoftDeletable)e).SoftDelete);
 
         if (entity == null)
             throw new KeyNotFoundException($"{GetEntityName()} With ID: {id} Not Exist");
@@ -60,7 +62,7 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
     {
         var entity = await _projectManagementSystemContext
             .Set<TEntity>()
-            .FindAsync(GetDtoId(dto))
+            .FirstOrDefaultAsync(e => GetId(e) == GetDtoId(dto) && !((ISoftDeletable)e).SoftDelete)
             ??
             throw new KeyNotFoundException($"{GetEntityName()} WIth ID: {GetDtoId(dto)} Not Exist");
     
@@ -68,11 +70,14 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
         UpdateEntity(entity,dto);
         await _projectManagementSystemContext.SaveChangesAsync();
 
-        await _eventService.Log(
-            eventTypeId: Guid.Parse("4C13B6AD-66E9-4532-A0C3-76E7C2BD29E9"),
-            tableId: RelatedTableID,
-            relatedId: GetEntityID(entity),
-            description: $"Edit"
+        var tablename = _projectManagementSystemContext.Model
+            .FindEntityType(typeof(TEntity))?
+            .GetTableName() ?? typeof(TEntity).Name;
+
+        await _logService.Log(
+            logTypeName: "Edit",
+            tableName: tablename,
+            relatedId: GetEntityID(entity)
         );
 
         return ToDto.Compile()(entity);
@@ -81,18 +86,30 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
     {
         var entity = await _projectManagementSystemContext
             .Set<TEntity>()
-            .FindAsync(id)
-            ??
-            throw new KeyNotFoundException($"{GetEntityName()} With ID: {id} Not Exist");
+            .FirstOrDefaultAsync(e => GetId(e) == id && !((ISoftDeletable)e).SoftDelete)
+        ?? throw new KeyNotFoundException($"{GetEntityName()} With ID: {id} Not Exist");
 
-        _projectManagementSystemContext.Set<TEntity>().Remove(entity);
+
+        if (entity is ISoftDeletable softDeletable)
+        {
+            softDeletable.SoftDelete = true;
+            _projectManagementSystemContext.Set<TEntity>().Update(entity);
+        }
+        else
+        {
+            _projectManagementSystemContext.Set<TEntity>().Remove(entity);
+        }
+
         await _projectManagementSystemContext.SaveChangesAsync();
 
-        await _eventService.Log(
-            eventTypeId: Guid.Parse("016620E4-1B1E-45F1-9AFD-362FB47CE0FD"),
-            tableId: RelatedTableID,
-            relatedId: GetEntityID(entity),
-            description: $"Delete with ID: {id}"
+        var tablename = _projectManagementSystemContext.Model
+            .FindEntityType(typeof(TEntity))?
+            .GetTableName() ?? typeof(TEntity).Name;
+
+        await _logService.Log(
+            logTypeName: "Delete",
+            tableName: tablename,
+            relatedId: GetEntityID(entity)
         );
 
         return ToDto.Compile()(entity);
@@ -113,11 +130,14 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
         
         await _projectManagementSystemContext.SaveChangesAsync();
 
-        await _eventService.Log(
-            eventTypeId: Guid.Parse("B7BFF458-FBA0-4549-A7B2-0D3A2839B47C"),
-            tableId: RelatedTableID,
-            relatedId: GetEntityID(entity),
-            description: $"Add"
+        var tablename = _projectManagementSystemContext.Model
+            .FindEntityType(typeof(TEntity))?
+            .GetTableName() ?? typeof(TEntity).Name;
+
+        await _logService.Log(
+            logTypeName: "Create",
+            tableName: tablename,
+            relatedId: GetEntityID(entity)
         );
 
         return ToDto.Compile()(entity);

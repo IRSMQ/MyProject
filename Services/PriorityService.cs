@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
-using Test26.Data;
+using Test26.Context;
 using Test26.DTOs;
 using Test26.EventS;
 using Test26.Models;
@@ -16,7 +16,7 @@ public interface IPriorityService
 
 public class PriorityService : PublicService<Priority,PriorityDto,PriorityAddDto>, IPriorityService
 {
-    public PriorityService(ProjectManagementSystemContext context, EventService eventService)
+    public PriorityService(ProjectManagementSystemContext context, LogService eventService)
     : base(context, eventService) { }
     protected override Guid GetId(Priority p) => p.PriorityId;
     protected override Guid GetDtoId(PriorityDto dto) => dto.PriorityId;

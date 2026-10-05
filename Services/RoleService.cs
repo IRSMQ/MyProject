@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
-using Test26.Data;
+using Test26.Context;
 using Test26.DTOs;
 using Test26.EventS;
 using Test26.Models;
@@ -16,7 +16,7 @@ public interface RoleInterface
 
 public class RoleService :PublicService<Role,RoleDto,RoleAddDto>, RoleInterface
 {
-    public RoleService(ProjectManagementSystemContext context, EventService eventService)
+    public RoleService(ProjectManagementSystemContext context, LogService eventService)
     : base(context,eventService) { }
 
     protected override Guid GetId(Role entity) => entity.RoleId;

@@ -1,5 +1,5 @@
 using Test26.Models;
-using Test26.Data;
+using Test26.Context;
 using Test26.DTOs;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -172,7 +172,7 @@ public class UserService : PublicService<User,UserDto,UserSignupDto> ,IUserServi
         ProjectManagementSystemContext context,
         PasswordHassherHandler passwordHassherHandler,
         TokenService tokenService,
-        EventService eventService
+        LogService eventService
         )
     : base(context,eventService)
     {

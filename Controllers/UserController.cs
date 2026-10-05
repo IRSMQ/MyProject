@@ -25,41 +25,29 @@ public class UserController : ControllerBase
 
     [HttpGet("getall")]
     public async Task<IActionResult> GetAllUser()
-    {
-        return Ok(ApiResponse<List<UserDto>>.Success(await _userService.GetAll(),$"Get All User Succeeded"));
-    }
+        => Ok(ApiResponse<List<UserDto>>.Success(await _userService.GetAll(),$"Get All User Succeeded"));
 
     [HttpGet("get/{id}")]
     public async Task<IActionResult> GetUserById(Guid id)
-    {
-        return Ok(ApiResponse<UserDto>.Success(await _userService.GetById(id),$"Get User By ID Succeeded"));
-    }
-
-    [HttpPut("edit")]
-    public async Task<IActionResult> EditUser([FromBody] UserDto userDto)
-    {
-        return Ok(ApiResponse<UserDto>.Success(await _userService.Edit(userDto),$"Edit User Succeeded"));
-    }
+        => Ok(ApiResponse<UserDto>.Success(await _userService.GetById(id),$"Get User By ID Succeeded"));
 
     [HttpPost("add")]
     public async Task<IActionResult> Add([FromBody] UserSignupDto userSignupDto)
-    {
-        return Ok(ApiResponse<UserDto>.Success(await _userService.SignUp(userSignupDto),$"User Add Succeeded"));
-    }
+        => Ok(ApiResponse<UserDto>.Success(await _userService.SignUp(userSignupDto),$"User Add Succeeded"));
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] UserLoginDto userLoginDto)
         => Ok(ApiResponse<UserToken>.Success(await _userService.Login(userLoginDto),$"Login Succeeded"));
 
+    [HttpPut("edit")]
+    public async Task<IActionResult> EditUser([FromBody] UserDto userDto)
+        => Ok(ApiResponse<UserDto>.Success(await _userService.Edit(userDto),$"Edit User Succeeded"));
+
     [HttpPatch("status")]
     public async Task<IActionResult> EditStatus([FromBody] UserEditStatus userEditStatus)
-    {
-        return Ok(ApiResponse<UserDto>.Success(await _userService.EditStatus(userEditStatus),$"Edit Status Succeeded"));
-    }
+        => Ok(ApiResponse<UserDto>.Success(await _userService.EditStatus(userEditStatus),$"Edit Status Succeeded"));
     
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> DeleteUser(Guid id)
-    {
-        return Ok(ApiResponse<UserDto>.Success(await _userService.Delete(id),$"Delete User With ID {id} Success"));
-    }
+        => Ok(ApiResponse<UserDto>.Success(await _userService.Delete(id),$"Delete User With ID {id} Success"));
 }

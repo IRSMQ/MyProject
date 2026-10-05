@@ -1,16 +1,17 @@
-﻿using Test26.Models;
+﻿/*
+using Test26.Models;
 using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
-namespace Test26.Data;
+namespace Test26.Context;
 
-public partial class ProjectManagementSystemContext : DbContext
+public partial class ProjectManagementSystemContextt : DbContext
 {
-    public ProjectManagementSystemContext()
+    public ProjectManagementSystemContextt()
     {
     }
-    public ProjectManagementSystemContext(DbContextOptions<ProjectManagementSystemContext> options)
+    public ProjectManagementSystemContextt(DbContextOptions<ProjectManagementSystemContext> options)
         : base(options)
     {
     }
@@ -25,7 +26,8 @@ public partial class ProjectManagementSystemContext : DbContext
     public virtual DbSet<Status> Statuses { get; set; }
     public virtual DbSet<TaskManagement> TaskManagements { get; set; }
     public virtual DbSet<User> Users { get; set; }
-    
+    public virtual DbSet<UserProject> UserProjects { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Event>(entity =>
@@ -121,6 +123,15 @@ public partial class ProjectManagementSystemContext : DbContext
                 .HasConstraintName("FK_Project_Status");
             
         });
+        
+        modelBuilder.Entity<UserProject>(entity =>
+        {
+            entity.ToTable("UserProject");
+
+            entity.HasKey(up => new { up.ProjectId, up.UserId});
+            entity.Property(e => e.ProjectId).HasColumnName("ProjectID");
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+        });
 
         modelBuilder.Entity<RelatedTable>(entity =>
         {
@@ -192,13 +203,13 @@ public partial class ProjectManagementSystemContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_TaskManagement_Priority");
 
-            /*
+            
             entity.HasOne(d => d.Project)
                 .WithMany((System.Linq.Expressions.Expression<Func<Priority, IEnumerable<TaskManagement>?>>?)(p => p.TaskManagements))
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_TaskManagement_Project");
-            */
+            
             entity.HasOne(d => d.Project)
                 .WithMany(p => p.TaskManagements)
                 .HasForeignKey(d => d.ProjectId)
@@ -248,3 +259,4 @@ public partial class ProjectManagementSystemContext : DbContext
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
+*/

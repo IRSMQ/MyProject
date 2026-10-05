@@ -1,6 +1,6 @@
 using Test26.Service;
 using Test26.Models;
-using Test26.Data;
+using Test26.Context;
 using Microsoft.EntityFrameworkCore;
 using AuthLab.Middleware;
 using System.IdentityModel.Tokens.Jwt;
@@ -80,7 +80,7 @@ builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<PriorityService>();
 builder.Services.AddScoped<StatusService>();
 builder.Services.AddScoped<RolePermissionService>();
-builder.Services.AddScoped<EventService>();
+builder.Services.AddScoped<LogService>();
 
 var app = builder.Build();
 ////////////////////////////////////

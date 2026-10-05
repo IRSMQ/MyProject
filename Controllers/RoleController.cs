@@ -17,31 +17,21 @@ public class RoleController : ControllerBase
 
     [HttpGet("getall")]
     public async Task<IActionResult> GetAll()
-    {
-        return Ok(ApiResponse<List<RoleDto>>.Success(await _roleService.GetAll(),$"Get All Succeeded"));
-    }
+        => Ok(ApiResponse<List<RoleDto>>.Success(await _roleService.GetAll(),$"Get All Succeeded"));
 
     [HttpGet("getByID/{id}")]
     public async Task<IActionResult> GetById(Guid id)
-    {
-        return Ok(ApiResponse<RoleDto>.Success(await _roleService.GetById(id),$"Get By ID"));
-    }
-
-    [HttpPut("edit")]
-    public async Task<IActionResult> Edit([FromBody] RoleDto roleDto)
-    {
-        return Ok(ApiResponse<RoleDto>.Success(await _roleService.Edit(roleDto),$"Edit Succeeded"));
-    }
+        => Ok(ApiResponse<RoleDto>.Success(await _roleService.GetById(id),$"Get By ID"));
 
     [HttpPost("add")]
     public async Task<IActionResult> Add([FromBody] RoleAddDto roleAddDto)
-    {
-        return Ok(ApiResponse<RoleDto>.Success(await _roleService.Add(roleAddDto),$"Add Succeeded"));
-    }
+        => Ok(ApiResponse<RoleDto>.Success(await _roleService.Add(roleAddDto),$"Add Succeeded"));
+
+    [HttpPut("edit")]
+    public async Task<IActionResult> Edit([FromBody] RoleDto roleDto)
+        => Ok(ApiResponse<RoleDto>.Success(await _roleService.Edit(roleDto),$"Edit Succeeded"));
 
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> Delete(Guid id)
-    {
-        return Ok(ApiResponse<RoleDto>.Success(await _roleService.Delete(id),$"Delete Succeeded"));
-    }
+        => Ok(ApiResponse<RoleDto>.Success(await _roleService.Delete(id),$"Delete Succeeded"));
 }

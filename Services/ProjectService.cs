@@ -1,5 +1,5 @@
 using Test26.Exception;
-using Test26.Data;
+using Test26.Context;
 using Test26.DTOs;
 using Test26.Models;
 using Microsoft.EntityFrameworkCore;
@@ -19,8 +19,8 @@ public interface IProjectService
 
 public class ProjectService :PublicService<Project,ProjectDto,CreateProject>, IProjectService
 {
-    public ProjectService(ProjectManagementSystemContext projectManagementSystemContext, EventService eventService)
-    : base(projectManagementSystemContext,eventService)
+    public ProjectService(ProjectManagementSystemContext projectManagementSystemContext, LogService logService)
+    : base(projectManagementSystemContext,logService)
     {
     }
 
@@ -61,7 +61,7 @@ public class ProjectService :PublicService<Project,ProjectDto,CreateProject>, IP
     protected override Guid RelatedTableID => Guid.Parse("73FA5D3A-291D-4043-9120-1FFF6F8C1843");
     protected override Guid GetEntityID(Project entity) => entity.ProjectId;
 
-
+    /*
     public async Task<ProjectDto> EditP(ProjectEditDto projectEditDto)
     {
         var pr = await _projectManagementSystemContext.Projects
@@ -69,16 +69,13 @@ public class ProjectService :PublicService<Project,ProjectDto,CreateProject>, IP
             .Include(p => p.Priority)
             .Include(p => p.Manager)
             .FirstOrDefaultAsync(r => r.ProjectId == projectEditDto.ProjectDtoId)
-            ??
-            throw new KeyNotFoundException("Project Not Found");
+            ?? throw new KeyNotFoundException("Project Not Found");
 
         
         var u = await _projectManagementSystemContext.Users
             .Include(p => p.Role)
             .FirstOrDefaultAsync(r => r.UserId == projectEditDto.ManagerId)
-            ??
-            throw new KeyNotFoundException("Manager Not Found");
-
+            ?? throw new KeyNotFoundException("Manager Not Found");
 
         pr.StatusId = projectEditDto.StatusId ?? pr.StatusId;
         
@@ -98,19 +95,208 @@ public class ProjectService :PublicService<Project,ProjectDto,CreateProject>, IP
 
         await _projectManagementSystemContext.SaveChangesAsync();
 
-        await _eventService.Log
-        (
-            eventTypeId: Guid.Parse("4C13B6AD-66E9-4532-A0C3-76E7C2BD29E9"),
-            tableId: Guid.Parse("682ACE13-5B56-4ED7-BEBA-BE3BC7652BB4"),
-            relatedId: pr.ProjectId,
-            description: "Edit in Project"
-        );
+        var tablename = _projectManagementSystemContext.Model
+            .FindEntityType(typeof(Project))?
+            .GetTableName() ?? typeof(Project).Name;
 
-        await EventRegistration("Edit in Project",relatedIdG:pr.ProjectId);
+        await LogRegister("Edit",tablename,pr.ProjectId);
 
         return ProjectToDto(pr);
     }
+    */
 
+    public async Task<ProjectDto> EditP(ProjectEditDto projectEditDto)
+    {
+        var pr = await _projectManagementSystemContext.Projects
+            .Include(p => p.Status)
+            .Include(p => p.Priority)
+            .Include(p => p.Manager)
+            .FirstOrDefaultAsync(r => r.ProjectId == projectEditDto.ProjectDtoId)
+            ?? throw new KeyNotFoundException("Project Not Found");
+            
+        if (projectEditDto.ManagerId.HasValue)
+        {
+            var u = await _projectManagementSystemContext.Users
+                .Include(p => p.Role)
+                .FirstOrDefaultAsync(r => r.UserId == projectEditDto.ManagerId)
+                ?? throw new KeyNotFoundException("Manager Not Found");
+
+            if (u.RoleId != Guid.Parse("6869DEFE-56C3-490A-BAB2-0EA92EC97BCA"))
+                throw new InvalidOperationException("The role must be Manager");
+
+            pr.ManagerId = projectEditDto.ManagerId.Value;
+        }
+
+        if (projectEditDto.PriorityId.HasValue)
+        {
+            var p = await _projectManagementSystemContext.Priorities
+                .FindAsync(projectEditDto.PriorityId)
+                ?? throw new KeyNotFoundException("Priority Not Found");
+
+            pr.PriorityId = projectEditDto.PriorityId;
+        }
+
+        if (projectEditDto.Title != null && projectEditDto.Title != "")
+        {
+            var p = await _projectManagementSystemContext.Projects
+                .AnyAsync(r => r.ProjectName == projectEditDto.Title);
+
+            if (p)
+                throw new InvalidOperationException("Project Name Exist");
+            
+            pr.ProjectName = projectEditDto.Title;
+        }
+
+        pr.Desc = projectEditDto.Description ?? pr.Desc;
+
+        var entry = _projectManagementSystemContext.Entry(pr);
+
+        var modifiedProps = entry.Properties
+            .Where(p => p.IsModified)
+            .Select(p => new
+            {
+                ColumnName = p.Metadata.Name,
+                OldVal = p.OriginalValue?.ToString() ?? "null",
+                NewVal = p.CurrentValue?.ToString() ?? "null"
+            })
+            .ToList();
+
+        await _projectManagementSystemContext.SaveChangesAsync();
+
+        if (modifiedProps.Any())
+        {
+            var tableName = _projectManagementSystemContext.Model
+                .FindEntityType(typeof(Project))?
+                .GetTableName() ?? nameof(Project);
+
+            var logId = await _logService.Log("Edit",tableName,pr.ProjectId);
+
+            foreach (var change in modifiedProps)
+                await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
+            
+            await _projectManagementSystemContext.SaveChangesAsync();
+        }
+        return ProjectToDto(pr);
+    }
+    public async Task<ProjectDto> EditDate(EditAllDate editAllDate)
+    {
+        var pr = await _projectManagementSystemContext.Projects
+            .FindAsync(editAllDate.ID)
+            ?? throw new KeyNotFoundException("Project Not Found");
+        
+        var tm = await _projectManagementSystemContext.TaskManagements
+                .Where(t => t.ProjectId == pr.ProjectId)
+                .ToListAsync();
+
+        if (editAllDate.CreationDate.HasValue)
+        {
+            if (editAllDate.CreationDate > pr.StartDate || editAllDate.CreationDate > pr.EndDate)
+                throw new InvalidOperationException("End/Start Date < Create Date");
+
+            foreach (var e in tm)
+            {
+                if (e.CreationDate < editAllDate.CreationDate)
+                    throw new InvalidOperationException("TM Creation Date < Project Creation Date");
+            }
+            pr.CreationDate = editAllDate.CreationDate.Value;
+        }
+
+        if (editAllDate.StartDate.HasValue)
+        {
+            if (editAllDate.StartDate > pr.EndDate || editAllDate.StartDate < pr.CreationDate)
+                throw new InvalidOperationException("Start Date > End Date or Start Date < Creation Date");
+
+            foreach (var e in tm)
+            {
+                if (editAllDate.StartDate > e.StartDate)
+                    throw new InvalidOperationException("Start Date Project > Start Date Task");
+            }
+
+            pr.StartDate = editAllDate.StartDate.Value;
+        }
+
+        if (editAllDate.DueDate.HasValue)
+        {
+            if (editAllDate.DueDate > pr.EndDate || editAllDate.DueDate < pr.CreationDate)
+                throw new InvalidOperationException("Due Date > End Date or Due Date < Creation Date");
+            
+            pr.DueDate = editAllDate.DueDate.Value;
+        }
+
+        if (editAllDate.EndDate.HasValue)
+        {
+            if (editAllDate.EndDate < pr.CreationDate || editAllDate.EndDate < pr.StartDate)
+                throw new InvalidOperationException("End Date < Creation Date or End Date < Start Date");
+
+            foreach (var e in tm)
+                if (e.CompletionDate > editAllDate.EndDate)
+                    throw new InvalidOperationException("Task Completion Date > Project Completion Date");
+
+            pr.EndDate = editAllDate.EndDate.Value;
+        }
+        var entry = _projectManagementSystemContext.Entry(pr);
+        var modifiedProps = entry.Properties
+            .Where(p => p.IsModified)
+            .Select(p => new
+            {
+                ColumnName = p.Metadata.Name,
+                OldVal = p.OriginalValue?.ToString() ?? "null",
+                NewVal = p.CurrentValue?.ToString() ?? "null"
+            })
+            .ToList();
+
+        await _projectManagementSystemContext.SaveChangesAsync();
+
+        if (modifiedProps.Any())
+        {
+            var tableName = _projectManagementSystemContext.Model
+                .FindEntityType(typeof(Project))?
+                .GetTableName() ?? nameof(Project);
+
+            var logId = await _logService.Log("Edit",tableName,pr.ProjectId);
+
+            foreach (var change in modifiedProps)
+                await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
+            
+            await _projectManagementSystemContext.SaveChangesAsync();
+        }
+        return ProjectToDto(pr);
+    }
+    
+
+    /////////////////////////////////////////////////////
+
+    private ProjectDto ProjectToDto(Project project)
+    {
+        return new ProjectDto
+        {
+            ProjectId = project.ProjectId,
+            StatusId = project.StatusId,
+            ManagerId = project.ManagerId,
+            PriorityId = project.PriorityId,
+            Title = project.ProjectName,
+            Description = project.Desc,
+            StartDate = project.StartDate,
+            EndDate = project.EndDate,
+            CreationDate = project.CreationDate,
+            StatusName = project.Status?.StatusName,
+            ManagerName = project.Manager?.UserFullName,
+            PriorityName = project.Priority?.PriorityName
+        };
+    }
+    private async Task LogRegister(string logtypename ,string tablename, Guid r)
+    {
+        await _logService.Log
+        (
+            logTypeName: logtypename,
+            tableName: tablename,
+            relatedId: r
+        );
+    }
+
+
+
+    /*
     public async Task<ProjectDto> EditManager(EditManager editManager)
     {
         var ur = await _projectManagementSystemContext.Users
@@ -145,12 +331,10 @@ public class ProjectService :PublicService<Project,ProjectDto,CreateProject>, IP
             .Include(p => p.Priority)
             .Include(p => p.Manager)
             .FirstOrDefaultAsync(r => r.ProjectId == projectEditStatus.ProjectId)
-        ??
-        throw new KeyNotFoundException("Project Not Found");
+            ?? throw new KeyNotFoundException("Project Not Found");
 
         var st = await _projectManagementSystemContext.Statuses.FindAsync(projectEditStatus.StatusId)
-        ??
-        throw new KeyNotFoundException("Status Not Found");
+        ?? throw new KeyNotFoundException("Status Not Found");
 
         if (projectEditStatus.StatusId == Guid.Parse("DB303C22-BB2F-438A-BDE0-401CFCA15B5C"))
         {
@@ -197,26 +381,10 @@ public class ProjectService :PublicService<Project,ProjectDto,CreateProject>, IP
 
         return ProjectToDto(pr);
     }
-    public async Task<ProjectDto> EditDesc(EditDesc editDesc)
-    {
-        var pr = await _projectManagementSystemContext.Projects
-            .Include(i => i.Status)
-            .Include(i => i.Manager)
-            .Include(i => i.Priority)
-            .FirstOrDefaultAsync(p => p.ProjectId == editDesc.projectId);
+    */
 
-        if (pr == null)
-            throw new KeyNotFoundException("Project Not Found");
 
-        pr.Desc = editDesc.Desc;
-
-        await _projectManagementSystemContext.SaveChangesAsync();
-
-        await EventRegistration("Edit in Project, Description",relatedIdG:pr.ProjectId);
-
-        return ProjectToDto(pr);
-    }
-    
+    /*
     public async Task<ProjectDto> EditCreationDate(EditDate editDate)
     {
         if (editDate == null)
@@ -249,12 +417,15 @@ public class ProjectService :PublicService<Project,ProjectDto,CreateProject>, IP
 
         return ProjectToDto(pr);
     }
+    */
+
+
+    /*
     public async Task<ProjectDto> EditStartDate(EditDate editDate)
     {
         var pr = await _projectManagementSystemContext.Projects
             .FindAsync(editDate.ID)
-        ??
-        throw new KeyNotFoundException("Project Not Found");
+            ?? throw new KeyNotFoundException("Project Not Found");
 
         if (editDate.Date > pr.EndDate || editDate.Date < pr.CreationDate)
             throw new InvalidOperationException("Start Date > End Date or Start Date < Creation Date");
@@ -276,7 +447,11 @@ public class ProjectService :PublicService<Project,ProjectDto,CreateProject>, IP
         await EventRegistration("Edit in Project, Start Date",relatedIdG:pr.ProjectId);
         
         return ProjectToDto(pr);
-    } 
+    }
+    */
+
+
+    /*
     public async Task<ProjectDto> EditDueDate(EditDate editDate)
     {
         var pr = await _projectManagementSystemContext.Projects
@@ -289,7 +464,7 @@ public class ProjectService :PublicService<Project,ProjectDto,CreateProject>, IP
             throw new InvalidOperationException("Date is Null");
 
         if (editDate.Date > pr.EndDate || editDate.Date < pr.CreationDate)
-            throw new InvalidOperationException("Start Date > End Date or Start Date < Creation Date");
+            throw new InvalidOperationException("Due Date > End Date or Due Date < Creation Date");
 
         pr.DueDate = editDate.Date.Value;
         await _projectManagementSystemContext.SaveChangesAsync();
@@ -298,6 +473,10 @@ public class ProjectService :PublicService<Project,ProjectDto,CreateProject>, IP
         
         return ProjectToDto(pr);
     }
+    */
+
+
+    /*
     public async Task<ProjectDto> EditEndDate(EditDate editDate)
     {
         var pr = await _projectManagementSystemContext.Projects
@@ -326,39 +505,5 @@ public class ProjectService :PublicService<Project,ProjectDto,CreateProject>, IP
 
         return ProjectToDto(pr);
     }
-    
-    
-    private ProjectDto ProjectToDto(Project project)
-    {
-        return new ProjectDto
-        {
-            ProjectId = project.ProjectId,
-            StatusId = project.StatusId,
-            ManagerId = project.ManagerId,
-            PriorityId = project.PriorityId,
-            Title = project.ProjectName,
-            Description = project.Desc,
-            StartDate = project.StartDate,
-            EndDate = project.EndDate,
-            CreationDate = project.CreationDate,
-            StatusName = project.Status?.StatusName,
-            ManagerName = project.Manager?.UserFullName,
-            PriorityName = project.Priority?.PriorityName
-        };
-    }
-    private async Task EventRegistration(string Desc, string? relatedIdS = null,Guid? relatedIdG = null)
-    {
-        var r = relatedIdS ?? relatedIdG.ToString()
-            ??
-            throw new InvalidOperationException("RelatedID is null");
-
-        await _eventService.Log
-        (
-            eventTypeId: Guid.Parse("4C13B6AD-66E9-4532-A0C3-76E7C2BD29E9"),
-            tableId: Guid.Parse("682ACE13-5B56-4ED7-BEBA-BE3BC7652BB4"),
-            relatedId: Guid.Parse(r),
-            description: Desc
-        );
-    }
-
+    */
 }

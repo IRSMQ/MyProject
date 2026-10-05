@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
-using Test26.Data;
+using Test26.Context;
 using Test26.DTOs;
 using Test26.EventS;
 using Test26.Models;
@@ -14,7 +14,7 @@ public interface StatusInterface
 
 public class StatusService : PublicService<Status,StatusDto,StatusAddDto>, StatusInterface
 {
-    public StatusService(ProjectManagementSystemContext context,EventService eventService)
+    public StatusService(ProjectManagementSystemContext context,LogService eventService)
     : base(context,eventService) { }
 
     protected override Guid GetId(Status entity) => entity.StatusId;

@@ -3,11 +3,13 @@ using System.Collections.Generic;
 
 namespace Test26.Models;
 
-public partial class Priority
+public partial class Priority : ISoftDeletable
 {
-    public Guid PriorityId { get; set; } = Guid.NewGuid();
+    public Guid PriorityId { get; set; }
 
     public string PriorityName { get; set; } = null!;
+
+    public bool SoftDelete { get; set; }
 
     public virtual ICollection<Project> Projects { get; set; } = new List<Project>();
 

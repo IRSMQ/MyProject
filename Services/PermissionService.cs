@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
-using Test26.Data;
+using Test26.Context;
 using Test26.DTOs;
 using Test26.EventS;
 using Test26.Models;
@@ -15,7 +15,7 @@ public interface IPermissionService
 
 public class PermissionService : PublicService<Permission,PermissionDto,PermissionAddDto>, IPermissionService
 {
-    public PermissionService(ProjectManagementSystemContext context, EventService eventService)
+    public PermissionService(ProjectManagementSystemContext context, LogService eventService)
     : base(context, eventService) { }
 
     protected override Guid GetId(Permission entity) => entity.PermissionId;

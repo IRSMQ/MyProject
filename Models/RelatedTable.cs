@@ -9,5 +9,5 @@ public partial class RelatedTable
 
     public string RelatedTableName { get; set; } = null!;
 
-    public virtual ICollection<Event> Events { get; set; } = new List<Event>();
+    public virtual ICollection<Log> Logs { get; set; } = new List<Log>();
 }

@@ -30,10 +30,6 @@ public class TaskManagementController : ControllerBase
     [HttpPost("create")]
     public async Task<IActionResult> Create(TMADto tMADto)
         => Ok(ApiResponse<TaskManagementDto>.Success(await _taskManagementService.Create(tMADto),$"Create Succeeded"));
-
-    [HttpPatch("edit/user")]
-    public async Task<IActionResult> EditUser(TaskEditObject taskEditUser)
-        => Ok(ApiResponse<TaskManagementDto>.Success(await _taskManagementService.EditUser(taskEditUser),$"Edit User Succeeded"));
     
     [HttpPatch("edit/status")]
     public async Task<IActionResult> EditStatus(TaskEditObject taskEditUser)
