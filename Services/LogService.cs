@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Test26.Context;
 using Test26.Models;
 
-namespace Test26.EventS;
+namespace Test26.Service;
 
 public class LogService
 {

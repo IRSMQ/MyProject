@@ -1,9 +1,11 @@
+
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Test26.Context;
 using Test26.DTOs;
-using Test26.EventS;
+using Test26.Service;
+
 using Test26.Models;
 
 namespace Test26.Service;
@@ -55,7 +57,7 @@ public class RoleService : RoleInterface
         return entity;
     }
 
-    public async Task<RoleDto> Add(RoleAddDto dto)
+    public async Task<RoleDto> Add(RoleDto dto)
     {
         var exists = await _context.Roles
             .AnyAsync(p => p.RoleName == dto.RoleName && !p.IsDeleted);
@@ -64,78 +66,77 @@ public class RoleService : RoleInterface
             throw new InvalidOperationException("Role already exists.");
 
         
-
-        var entity = new Role
+        if (dto.RoleId.HasValue)
         {
-            RoleId = Guid.NewGuid(),
-            RoleName = dto.RoleName,
-            IsDeleted = false
-        };
+            var entity = await _context.Roles
+                .FindAsync(dto.RoleId)
+                ?? throw new KeyNotFoundException("Role with this ID not found");
 
-        _context.Roles.Add(entity);
-        await _context.SaveChangesAsync();
+            entity.RoleName = dto.RoleName;
 
-        var logId = await _logService.Log("Create", nameof(Role), entity.RoleId);
+            var entry = _context.Entry(entity);
 
-        var entry = _context.Entry(entity);
-        foreach (var prop in entry.Properties)
-        {
-            await _logService.ChangLog(
-                logId,
-                oldValue: "null",
-                newValue: prop.CurrentValue?.ToString() ?? "null",
-                columnName: prop.Metadata.Name
-            );
-        }
+            var modifiedProperties = entry.Properties
+                .Where(p => p.IsModified)
+                .Select(p => new
+                {
+                    Name = p.Metadata.Name,
+                    OldValue = p.OriginalValue?.ToString() ?? "null",
+                    NewValue = p.CurrentValue?.ToString() ?? "null"
+                })
+                .ToList();
 
-        return new RoleDto
-        {
-            RoleId = entity.RoleId,
-            RoleName = entity.RoleName
-        };
-    }
+            await _context.SaveChangesAsync();
 
-    public async Task<RoleDto> EditAsync(RoleDto dto)
-    {
-        var entity = await _context.Roles
-            .FirstOrDefaultAsync(p => p.RoleId == dto.RoleId && !p.IsDeleted);
-
-        if (entity == null)
-            throw new KeyNotFoundException($"Role with ID {dto.RoleId} not found.");
-
-        entity.RoleName = dto.RoleName;
-
-        var entry = _context.Entry(entity);
-        var modifiedProperties = entry.Properties
-            .Where(p => p.IsModified)
-            .Select(p => new
+            if (modifiedProperties.Any())
             {
-                Name = p.Metadata.Name,
-                OldValue = p.OriginalValue?.ToString() ?? "null",
-                NewValue = p.CurrentValue?.ToString() ?? "null"
-            })
-            .ToList();
+                var logId = await _logService.Log("Edit", nameof(Role), entity.RoleId);
 
-        await _context.SaveChangesAsync();
-
-        if (modifiedProperties.Any())
-        {
-            var logId = await _logService.Log("Edit", nameof(Role), entity.RoleId);
-
-            foreach (var prop in modifiedProperties)
-            {
-                await _logService.ChangLog(logId, prop.OldValue, prop.NewValue, prop.Name);
+                foreach (var prop in modifiedProperties)
+                {
+                    await _logService.ChangLog(logId, prop.OldValue, prop.NewValue, prop.Name);
+                }
             }
-        }
 
-        return new RoleDto
+            return new RoleDto
+            {
+                RoleId = entity.RoleId,
+                RoleName = entity.RoleName
+            };
+        }
+        else
         {
-            RoleId = entity.RoleId,
-            RoleName = entity.RoleName
-        };
+            var newEntity = new Role
+            {
+                RoleId = Guid.NewGuid(),
+                RoleName = dto.RoleName,
+                IsDeleted = false
+            };
+
+            _context.Roles.Add(newEntity);
+            await _context.SaveChangesAsync();
+
+            var logId = await _logService.Log("Create", nameof(Role), newEntity.RoleId);
+
+            var entry = _context.Entry(newEntity);
+            foreach (var prop in entry.Properties)
+            {
+                await _logService.ChangLog(
+                    logId,
+                    oldValue: "null",
+                    newValue: prop.CurrentValue?.ToString() ?? "null",
+                    columnName: prop.Metadata.Name
+                );
+            }
+            return new RoleDto
+            {
+                RoleId = newEntity.RoleId,
+                RoleName = newEntity.RoleName
+            };
+        }
     }
 
-    public async Task<RoleDto> DeleteAsync(Guid id)
+    public async Task<RoleDto> Delete(Guid id)
     {
         var entity = await _context.Roles
             .FirstOrDefaultAsync(p => p.RoleId == id && !p.IsDeleted);
@@ -144,9 +145,24 @@ public class RoleService : RoleInterface
             throw new KeyNotFoundException($"Role with ID {id} not found.");
 
         entity.IsDeleted = true;
-        await _context.SaveChangesAsync();
 
-        await _logService.Log("Delete", nameof(Role), entity.RoleId);
+        var userEntity = await _context.Users
+            .Where(p => p.RoleId == id)
+            .ToListAsync();
+
+        foreach (var u in userEntity)
+            u.RoleId = null;
+
+        var roleLogId = await _logService.Log("Delete", nameof(Role), entity.RoleId);
+        await _logService.ChangLog(roleLogId, "False", "True", nameof(entity.IsDeleted));
+
+        foreach (var u in userEntity)
+        {
+            var userLogId = await _logService.Log("Edit", nameof(User), u.UserId);
+            await _logService.ChangLog(userLogId, id.ToString(), "null", nameof(u.RoleId));
+        }
+
+        await _context.SaveChangesAsync();
 
         return new RoleDto
         {

@@ -1,3 +1,4 @@
+/*
 using Microsoft.EntityFrameworkCore;
 using Test26.Context;
 using Test26.DTOs;
@@ -139,6 +140,5 @@ public class RolePermissionService
             PermissionName = p.PermissionName
         };
     }
-
-
 }
+*/

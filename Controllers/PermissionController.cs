@@ -4,7 +4,6 @@ using Test26.ApiR;
 using Test26.Context;
 using Test26.DTOs;
 using Test26.Service;
-using Test26.EventS;
 using Test26.Models;
 namespace Test26.Controller;
 
