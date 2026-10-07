@@ -9,7 +9,7 @@ public partial class Role : ISoftDeletable
 
     public string RoleName { get; set; } = null!;
 
-    public bool SoftDelete { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual ICollection<User> Users { get; set; } = new List<User>();
 }

@@ -9,7 +9,7 @@ public partial class TaskUser : ISoftDeletable
 
     public Guid UserId { get; set; }
 
-    public bool SoftDelete { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual TaskManagement Task { get; set; } = null!;
 

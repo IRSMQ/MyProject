@@ -9,7 +9,7 @@ public partial class Priority : ISoftDeletable
 
     public string PriorityName { get; set; } = null!;
 
-    public bool SoftDelete { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual ICollection<Project> Projects { get; set; } = new List<Project>();
 

@@ -38,7 +38,7 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
     {
         var list = await _projectManagementSystemContext
             .Set<TEntity>()
-            .Where(e => !((ISoftDeletable)e).SoftDelete)
+            .Where(e => !((ISoftDeletable)e).IsDeleted)
             .Select(ToDto)
             .ToListAsync();
 
@@ -51,7 +51,7 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
     {
         var entity = await _projectManagementSystemContext
             .Set<TEntity>()
-            .FirstOrDefaultAsync(e => GetId(e) == id && !((ISoftDeletable)e).SoftDelete);
+            .FirstOrDefaultAsync(e => GetId(e) == id && !((ISoftDeletable)e).IsDeleted);
 
         if (entity == null)
             throw new KeyNotFoundException($"{GetEntityName()} With ID: {id} Not Exist");
@@ -62,7 +62,7 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
     {
         var entity = await _projectManagementSystemContext
             .Set<TEntity>()
-            .FirstOrDefaultAsync(e => GetId(e) == GetDtoId(dto) && !((ISoftDeletable)e).SoftDelete)
+            .FirstOrDefaultAsync(e => GetId(e) == GetDtoId(dto) && !((ISoftDeletable)e).IsDeleted)
             ??
             throw new KeyNotFoundException($"{GetEntityName()} WIth ID: {GetDtoId(dto)} Not Exist");
     
@@ -86,13 +86,13 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
     {
         var entity = await _projectManagementSystemContext
             .Set<TEntity>()
-            .FirstOrDefaultAsync(e => GetId(e) == id && !((ISoftDeletable)e).SoftDelete)
+            .FirstOrDefaultAsync(e => GetId(e) == id && !((ISoftDeletable)e).IsDeleted)
         ?? throw new KeyNotFoundException($"{GetEntityName()} With ID: {id} Not Exist");
 
 
         if (entity is ISoftDeletable softDeletable)
         {
-            softDeletable.SoftDelete = true;
+            softDeletable.IsDeleted = true;
             _projectManagementSystemContext.Set<TEntity>().Update(entity);
         }
         else

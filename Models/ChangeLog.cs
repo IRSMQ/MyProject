@@ -13,7 +13,7 @@ public partial class ChangeLog : ISoftDeletable
 
     public string NewValue { get; set; } = null!;
 
-    public bool SoftDelete { get; set; } = false;
+    public bool IsDeleted { get; set; } = false;
 
     public virtual Log Log { get; set; } = null!;
 }

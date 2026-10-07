@@ -9,7 +9,7 @@ public partial class UserProject : ISoftDeletable
 
     public Guid UserId { get; set; }
 
-    public bool SoftDelete { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual Project Project { get; set; } = null!;
 

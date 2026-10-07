@@ -11,7 +11,7 @@ public partial class UserPermission : ISoftDeletable
 
     public byte Int { get; set; }
 
-    public bool SoftDelete { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual Permission Permission { get; set; } = null!;
 

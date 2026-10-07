@@ -19,7 +19,7 @@ public partial class Log : ISoftDeletable
 
     public DateTime Date { get; set; } = DateTime.Now;
 
-    public bool SoftDelete { get; set; } = false;
+    public bool IsDeleted { get; set; } = false;
 
     public virtual User? User { get; set; }
 }

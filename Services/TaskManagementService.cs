@@ -18,6 +18,7 @@ public class TaskManagementService
     public async Task<List<TaskManagementDto>> GetAll()
     {
         var tm = await _projectManagementSystemContext.TaskManagements
+            .Where(r => !((ISoftDeletable)r).IsDeleted)
             .Select(r => new TaskManagementDto
             {
                 TaskManagementId = r.TaskManagementId,
@@ -53,7 +54,7 @@ public class TaskManagementService
             .Include(r => r.Status)
             .Include(r => r.Priority)
             .Include(r => r.Parent)
-            .FirstOrDefaultAsync(t => t.TaskManagementId == id);
+            .FirstOrDefaultAsync(t => t.TaskManagementId == id && !((ISoftDeletable)t).IsDeleted);
 
         if (tm == null)
             throw new KeyNotFoundException($"Task with ID {id} Not Found");
@@ -126,7 +127,7 @@ public class TaskManagementService
             .Include(r => r.Status)
             .Include(r => r.Priority)
             .Include(r => r.Parent)
-            .FirstOrDefaultAsync(t => t.TaskManagementId == id);
+            .FirstOrDefaultAsync(t => t.TaskManagementId == id && !((ISoftDeletable)t).IsDeleted);
 
         if (tm == null)
             throw new KeyNotFoundException("Task Not Found");
@@ -180,7 +181,7 @@ public class TaskManagementService
             "Priority Not Found"
         );
     }
-    
+
     public async Task<TaskManagementDto> Parent(TMEPDto tMEPDto)
     {
         var tm = await _projectManagementSystemContext.TaskManagements

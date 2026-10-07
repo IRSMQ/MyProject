@@ -9,5 +9,5 @@ public partial class Permission : ISoftDeletable
 
     public string PermissionName { get; set; } = null!;
 
-    public bool SoftDelete { get; set; }
+    public bool IsDeleted { get; set; }
 }

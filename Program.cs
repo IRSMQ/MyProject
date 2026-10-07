@@ -81,6 +81,7 @@ builder.Services.AddScoped<PriorityService>();
 builder.Services.AddScoped<StatusService>();
 builder.Services.AddScoped<RolePermissionService>();
 builder.Services.AddScoped<LogService>();
+builder.Services.AddScoped<ChangeLogService>();
 
 var app = builder.Build();
 ////////////////////////////////////

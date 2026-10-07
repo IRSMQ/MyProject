@@ -25,7 +25,7 @@ public partial class Project : ISoftDeletable
 
     public DateTime? EndDate { get; set; }
 
-    public bool SoftDelete { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual User? Manager { get; set; }
 

@@ -9,7 +9,7 @@ public partial class RolePermission : ISoftDeletable
 
     public Guid PermissionId { get; set; }
 
-    public bool SoftDelete { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual Permission Permission { get; set; } = null!;
 

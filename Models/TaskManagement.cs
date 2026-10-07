@@ -27,7 +27,7 @@ public partial class TaskManagement : ISoftDeletable
 
     public DateTime? CompletionDate { get; set; }
 
-    public bool SoftDelete { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual ICollection<TaskManagement> InverseParent { get; set; } = new List<TaskManagement>();
 
