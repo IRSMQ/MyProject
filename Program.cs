@@ -17,7 +17,7 @@ using Test26.EventS;
 var builder = WebApplication.CreateBuilder(args);
 
 
-builder.Services.AddDbContext<ProjectManagementSystemContext>(options=>
+builder.Services.AddDbContext<Test26.Context.ProjectManagementSystemContext>(options=>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ProjectManagmentSystem")));
 
 var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Error in JWT KEY"));
@@ -75,9 +75,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<PasswordHassherHandler>();
 builder.Services.AddScoped<TaskManagementService>();
-builder.Services.AddScoped<PermissionService>();
 builder.Services.AddScoped<RoleService>();
-builder.Services.AddScoped<PriorityService>();
 builder.Services.AddScoped<StatusService>();
 builder.Services.AddScoped<RolePermissionService>();
 builder.Services.AddScoped<LogService>();
