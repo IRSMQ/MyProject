@@ -20,76 +20,104 @@ public interface IUserService
 }
 
 
-public class UserService : PublicService<User,UserDto,UserSignupDto> ,IUserService
+public class UserService : IUserService
 {
-    /*
-    private readonly ProjectManagementSystemContext _projectManagementSystemContext;
+    
+    private readonly ProjectManagementSystemContext _context;
     private readonly TokenService _tokenService;
     private readonly PasswordHassherHandler _passwordHassherHandler;
-    public UserService(ProjectManagementSystemContext projectManagementSystemContext, TokenService tokenService, PasswordHassherHandler passwordHassherHandler)
+    private readonly LogService _logService;
+    public UserService(ProjectManagementSystemContext context, TokenService tokenService, PasswordHassherHandler passwordHassherHandler, LogService logService)
     {
-        _projectManagementSystemContext = projectManagementSystemContext;
+        _context = context;
         _tokenService = tokenService;
         _passwordHassherHandler = passwordHassherHandler;
+        _logService = logService;
     }
 
     
     public async Task<List<UserDto>> GetAll()
     {
-        var users = await _projectManagementSystemContext.Users
+        var entity = await _context.Users
             .Select(u=> new UserDto
             {
                 UserId = u.UserId,
+                RoleId = u.RoleId,
                 UserFullName = u.UserFullName,
-                Role = u.Role,
                 Username = u.Username,
-                Phone = u.UserPhone,
                 Email = u.UserEmail,
-                Status = u.UserStatus
+                Phone = u.UserPhone,
+                Status = u.UserStatus,
+                RoleName = u.Role.RoleName
             })
             .ToListAsync();
-        if (users.Count == 0)
+        if (entity.Count == 0)
             throw new InvalidOperationException("There are no users");
 
-        return users;
+        return entity;
     }
 
     public async Task<UserDto> GetById(Guid id)
     {
-        var user = await _FindAsync(id);
+        var entity = await _FindAsync(id);
          
-        var newUser = userToDto(user);
+        var newUser = userToDto(entity);
 
         return newUser;
     }
 
     public async Task<UserDto> Edit(UserDto userDto)
     {
-        var user = await _FindAsync(userDto.UserId);
+        var entity = await _FindAsync(userDto.UserId);
 
-        user.UserId = userDto.UserId;
-        user.Role = userDto.Role;
-        user.UserFullName = userDto.UserFullName;
-        user.Username = userDto.Username;
-        user.UserStatus = userDto.Status;
-        user.UserEmail = userDto.Email;
-        user.UserPhone = userDto.Phone;
-        
-        await _projectManagementSystemContext.SaveChangesAsync();
+        entity.RoleId = userDto.RoleId;
+        entity.UserFullName = userDto.UserFullName;
+        entity.Username = userDto.Username;
+        entity.UserStatus = userDto.Status;
+        entity.UserEmail = userDto.Email;
+        entity.UserPhone = userDto.Phone;
 
-        return userDto;
+        var entry = _context.Entry(entity);
+
+        var modifiedProps = entry.Properties
+            .Where(p => p.IsModified)
+            .Select( p => new
+            {
+                ColumnName = p.Metadata.Name,
+                OldVal = p.OriginalValue?.ToString() ?? "null",
+                NewVal = p.CurrentValue?.ToString() ?? "null"
+            })
+            .ToList();
+
+        await _context.SaveChangesAsync();
+
+        if (modifiedProps.Any())
+        {
+            var tableName = _context.Model
+                .FindEntityType(typeof(User))?
+                .GetTableName() ?? nameof(User);
+
+            var logId = await _logService.Log("Edit", tableName, entity.UserId);
+
+            foreach (var change in modifiedProps)
+                await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
+
+            await _context.SaveChangesAsync();
+        }
+
+        return userToDto(entity);
     }
 
     public async Task<UserDto> Delete(Guid id)
     {
         var user = await _FindAsync(id);
 
-        await _projectManagementSystemContext.UserProjects
+        await _context.UserProjects
             .Where(up=>up.UserId == id)
             .ExecuteDeleteAsync();
 
-        _projectManagementSystemContext.Users.Remove(user);
-        await _projectManagementSystemContext.SaveChangesAsync();
+        _context.Users.Remove(user);
+        await _context.SaveChangesAsync();
 
         return userToDto(user);
     }
@@ -100,51 +128,39 @@ public class UserService : PublicService<User,UserDto,UserSignupDto> ,IUserServi
 
         user.UserStatus = status;
 
-        await _projectManagementSystemContext.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         return userToDto(user);
     }
 
-    public async Task<string> Login(UserLoginDto userLoginDto)
-    {
-        var user = await _projectManagementSystemContext.Users
-            .FirstOrDefaultAsync(u=>u.Username == userLoginDto.Username);
+    // public async Task<UserDto> SignUp(UserSignupDto suser)
+    // {
+    //     var user = await _projectManagementSystemContext.Users.Where( u=> u.Username == suser.Username).FirstOrDefaultAsync();
 
-        if (user == null || !_passwordHassherHandler.Verify(userLoginDto.Password,user.UserPassword))
-            throw new KeyNotFoundException($"Incorrect username or password");
+    //     if (user != null)
+    //         throw new InvalidOperationException("Username Exist");
 
-        var token = _tokenService.GenerateToken(user);
-        return token;
-    }
+    //     if (suser.Username == "" || suser.UserPassword == "")
+    //             throw new ArgumentException("Username or Password is Null");
 
-    public async Task<UserDto> SignUp(UserSignupDto suser)
-    {
-        var user = await _projectManagementSystemContext.Users.Where( u=> u.Username == suser.Username).FirstOrDefaultAsync();
+    //     var newUser = new User
+    //     {
+    //         UserEmail = suser.UserEmail,
+    //         Username = suser.Username,
+    //         UserFullName = suser.UserFullName,
+    //         UserPassword = _passwordHassherHandler.Hash(suser.UserPassword),
+    //         UserPhone = suser.UserPhone
+    //     };
 
-        if (user != null)
-            throw new InvalidOperationException("Username Exist");
+    //     _projectManagementSystemContext.Users.Add(newUser);
+    //     await _projectManagementSystemContext.SaveChangesAsync();
 
-        if (suser.Username == "" || suser.UserPassword == "")
-                throw new ArgumentException("Username or Password is Null");
-
-        var newUser = new User
-        {
-            UserEmail = suser.UserEmail,
-            Username = suser.Username,
-            UserFullName = suser.UserFullName,
-            UserPassword = _passwordHassherHandler.Hash(suser.UserPassword),
-            UserPhone = suser.UserPhone
-        };
-
-        _projectManagementSystemContext.Users.Add(newUser);
-        await _projectManagementSystemContext.SaveChangesAsync();
-
-        return userToDto(newUser);
-    }
+    //     return userToDto(newUser);
+    // }
 
     private async Task<User> _FindAsync(Guid id)
     {
-        var user = await _projectManagementSystemContext.Users.FindAsync(id);
+        var user = await _context.Users.FindAsync(id);
         if (user == null)
             throw new KeyNotFoundException($"User With ID {id} Not Exist");
 
@@ -165,71 +181,9 @@ public class UserService : PublicService<User,UserDto,UserSignupDto> ,IUserServi
         return newUser;
     }
 
-    */
-    private readonly PasswordHassherHandler _passwordHassherHandler;
-    private readonly TokenService _tokenService;
-    public UserService(
-        ProjectManagementSystemContext context,
-        PasswordHassherHandler passwordHassherHandler,
-        TokenService tokenService,
-        LogService eventService
-        )
-    : base(context,eventService)
-    {
-        _passwordHassherHandler = passwordHassherHandler;
-        _tokenService = tokenService;
-    }
-
-    protected override Guid GetId(User entity) => entity.UserId;
-    protected override Guid GetDtoId(UserDto dto) => dto.UserId;
-    protected override string GetEntityName() => "User";
-    protected override Expression<Func<User, UserDto>> ToDto => entity => new UserDto
-    {
-        UserId = entity.UserId,
-        RoleId = entity.RoleId.Value,
-        UserFullName = entity.UserFullName,
-        Username = entity.Username,
-        Status = entity.UserStatus,
-        Email = entity.UserEmail,
-        Phone = entity.UserPhone,
-        RoleName = entity.Role.RoleName
-    };
-    protected override User ToEntity(UserSignupDto addDto) => new()
-    {
-        UserFullName = addDto.UserFullName,
-        Username = addDto.Username,
-        UserEmail = addDto.UserEmail,
-        UserPhone = addDto.UserPhone,
-        UserPassword = addDto.UserPassword,
-        UserStatus = addDto.UserStatus
-    };
-    protected override void UpdateEntity(User user, UserDto userDto)
-    {
-        user.RoleId = userDto.RoleId;
-        user.UserFullName = userDto.UserFullName;
-        user.Username = userDto.Username;
-        user.UserStatus = userDto.Status;
-        user.UserEmail = userDto.Email;
-        user.UserPhone = userDto.Phone;
-    }
-    protected override IQueryable<User> ApplyDuplicateCheck(IQueryable<User> query, UserSignupDto addDto)
-        => query.Where(r => r.Username == addDto.Username);
-    
-    public override async Task<UserDto> GetById(Guid id)
-    {
-        var entity = await _projectManagementSystemContext.Users
-            .Include(u => u.Role)
-            .FirstOrDefaultAsync(d => d.UserId == id);
-
-        if (entity == null)
-            throw new KeyNotFoundException($"{GetEntityName()} With ID: {id} Not Exist");
-
-        return ToDto.Compile()(entity);
-    }
-    
     public async Task<UserDto> EditStatus(UserEditStatus userEditStatus)
     {
-        var user = await _projectManagementSystemContext.Users
+        var user = await _context.Users
             .FindAsync(userEditStatus.Id);
 
         if (user == null)
@@ -237,7 +191,7 @@ public class UserService : PublicService<User,UserDto,UserSignupDto> ,IUserServi
 
         user.UserStatus = userEditStatus.Status;
 
-        await _projectManagementSystemContext.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         return new UserDto
         {
@@ -254,7 +208,7 @@ public class UserService : PublicService<User,UserDto,UserSignupDto> ,IUserServi
     }
     public async Task<UserDto> SignUp(UserSignupDto suser)
     {
-        var user = await _projectManagementSystemContext.Users
+        var user = await _context.Users
             .AnyAsync( u=> u.Username == suser.Username);
 
         if (user)
@@ -274,10 +228,10 @@ public class UserService : PublicService<User,UserDto,UserSignupDto> ,IUserServi
             UserStatus = suser.UserStatus
         };
 
-        _projectManagementSystemContext.Users.Add(newUser);
-        await _projectManagementSystemContext.SaveChangesAsync();
+        _context.Users.Add(newUser);
+        await _context.SaveChangesAsync();
 
-        var role = await _projectManagementSystemContext.Roles
+        var role = await _context.Roles
             .FindAsync(suser.RoleId);
 
         return new UserDto
@@ -294,7 +248,7 @@ public class UserService : PublicService<User,UserDto,UserSignupDto> ,IUserServi
     }
     public async Task<UserToken> Login(UserLoginDto userLoginDto)
     {
-        var ur = await _projectManagementSystemContext.Users
+        var ur = await _context.Users
             .Include(i => i.Role)
             .FirstOrDefaultAsync(u => u.Username == userLoginDto.Username)
         ??
@@ -314,6 +268,4 @@ public class UserService : PublicService<User,UserDto,UserSignupDto> ,IUserServi
         };
     }
 
-    protected override Guid RelatedTableID => Guid.Parse("68C0748E-652D-4B94-AA8E-F810E7A447CB");
-    protected override Guid GetEntityID(User entity) => entity.UserId;
 }

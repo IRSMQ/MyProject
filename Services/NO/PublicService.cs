@@ -1,3 +1,4 @@
+/*
 using System.ClientModel.Primitives;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
@@ -29,9 +30,7 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
     protected abstract void UpdateEntity(TEntity entity, TDto dto);
     protected abstract IQueryable<TEntity> ApplyDuplicateCheck(IQueryable<TEntity> query, TAddDto addDto);
 
-
-    protected abstract Guid RelatedTableID { get; }
-    protected abstract Guid GetEntityID(TEntity entity);
+    protected abstract Expression<Func<TEntity, Guid>> MatchById { get; }
 
 
     public virtual async Task<List<TDto>> GetAll()
@@ -60,25 +59,55 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
     }
     public virtual async Task<TDto> Edit(TDto dto)
     {
+        
         var entity = await _projectManagementSystemContext
             .Set<TEntity>()
             .FirstOrDefaultAsync(e => GetId(e) == GetDtoId(dto) && !((ISoftDeletable)e).IsDeleted)
-            ??
-            throw new KeyNotFoundException($"{GetEntityName()} WIth ID: {GetDtoId(dto)} Not Exist");
+            ?? throw new KeyNotFoundException($"{GetEntityName()} WIth ID: {GetDtoId(dto)} Not Exist");
     
 
         UpdateEntity(entity,dto);
+
+        
+        var query = _projectManagementSystemContext
+            .Set<TEntity>()
+            .Where(MatchById(GetDtoId(dto)));
+
+        if (typeof(ISoftDeletable).IsAssignableFrom(typeof(TEntity)))
+            query = query.Where(e => !((ISoftDeletable)e).IsDeleted);
+
+        var entity = await query.FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"{GetEntityName} with ID {GetDtoId(dto)} not found");
+
+        
+
         await _projectManagementSystemContext.SaveChangesAsync();
 
-        var tablename = _projectManagementSystemContext.Model
-            .FindEntityType(typeof(TEntity))?
-            .GetTableName() ?? typeof(TEntity).Name;
+        var entry = _projectManagementSystemContext.Entry(entity);
 
-        await _logService.Log(
-            logTypeName: "Edit",
-            tableName: tablename,
-            relatedId: GetEntityID(entity)
-        );
+        var modifiedProps = entry.Properties
+            .Where(p => p.IsModified)
+            .Select(p => new
+            {
+                ColumnName = p.Metadata.Name,
+                OldVal = p.OriginalValue?.ToString() ?? "null",
+                NewVal = p.CurrentValue?.ToString() ?? "null"
+            })
+            .ToList();
+
+        if (modifiedProps.Any())
+        {
+            var tablename = _projectManagementSystemContext.Model
+                .FindEntityType(typeof(TEntity))?
+                .GetTableName() ?? typeof(TEntity).Name;
+
+            var logId = await _logService.Log("Edit", tablename, GetId(entity));
+
+            foreach (var change in modifiedProps)
+                await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
+
+            await _projectManagementSystemContext.SaveChangesAsync();
+        }
 
         return ToDto.Compile()(entity);
     }
@@ -109,7 +138,7 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
         await _logService.Log(
             logTypeName: "Delete",
             tableName: tablename,
-            relatedId: GetEntityID(entity)
+            relatedId: GetId(entity)
         );
 
         return ToDto.Compile()(entity);
@@ -126,20 +155,31 @@ public abstract class PublicService<TEntity, TDto, TAddDto>
             throw new InvalidOperationException($"{GetEntityName()} already exists");
 
         var entity = ToEntity(addDto);
-        _projectManagementSystemContext.Set<TEntity>().Add(entity);
         
+        _projectManagementSystemContext.Set<TEntity>().Add(entity);
+
         await _projectManagementSystemContext.SaveChangesAsync();
 
         var tablename = _projectManagementSystemContext.Model
             .FindEntityType(typeof(TEntity))?
             .GetTableName() ?? typeof(TEntity).Name;
 
-        await _logService.Log(
+
+        var logid = await _logService.Log(
             logTypeName: "Create",
             tableName: tablename,
-            relatedId: GetEntityID(entity)
+            relatedId: GetId(entity)
         );
+
+        var entry = _projectManagementSystemContext.Entry(entity);
+
+        foreach(var e in entry.Properties)
+            await _logService.ChangLog(logid, "null", e.CurrentValue?.ToString() ?? "null", e.Metadata.Name);
+
+
+        await _projectManagementSystemContext.SaveChangesAsync();
 
         return ToDto.Compile()(entity);
     }
 }
+*/

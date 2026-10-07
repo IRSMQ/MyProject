@@ -20,7 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ProjectManagementSystemContext>(options=>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ProjectManagmentSystem")));
 
-var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]);
+var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Error in JWT KEY"));
 
 builder.Services.AddAuthentication(options =>
 {
@@ -81,7 +81,6 @@ builder.Services.AddScoped<PriorityService>();
 builder.Services.AddScoped<StatusService>();
 builder.Services.AddScoped<RolePermissionService>();
 builder.Services.AddScoped<LogService>();
-builder.Services.AddScoped<ChangeLogService>();
 
 var app = builder.Build();
 ////////////////////////////////////
