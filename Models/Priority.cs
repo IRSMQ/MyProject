@@ -5,7 +5,7 @@ namespace Test26.Models;
 
 public partial class Priority : ISoftDeletable
 {
-    public Guid PriorityId { get; set; }
+    public Guid PriorityId { get; set; } = Guid.NewGuid();
 
     public string PriorityName { get; set; } = null!;
 

@@ -8,12 +8,12 @@ namespace Test26.EventS;
 
 public class LogService
 {
-    private static ProjectManagementSystemContext _context = null!;
-    private static IHttpContextAccessor _httpContextAccessor = null!;
+    private readonly ProjectManagementSystemContext _context;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public LogService(ProjectManagementSystemContext pmsc, IHttpContextAccessor IHTTP)
+    public LogService(ProjectManagementSystemContext context, IHttpContextAccessor IHTTP)
     {
-        _context = pmsc;
+        _context = context;
         _httpContextAccessor = IHTTP;
     }
 
@@ -36,7 +36,7 @@ public class LogService
         };
 
         await _context.Logs.AddAsync(ev);
-        await _context.SaveChangesAsync();
+        // await _context.SaveChangesAsync();
 
         return logId;
     }
@@ -52,5 +52,6 @@ public class LogService
         };
         
         await _context.ChangeLogs.AddAsync(ncl);
+        // await _context.SaveChangesAsync();
     }
 }

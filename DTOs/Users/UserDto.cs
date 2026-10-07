@@ -8,7 +8,7 @@ namespace Test26.DTOs;
 public class UserDto
 {
     public Guid UserId { get; set; }
-    public Guid RoleId { get; set; }
+    public Guid? RoleId { get; set; }
     public string UserFullName { get; set; } = null!;
     public string Username { get; set; } = null!;
     public string? Email { get; set; }
