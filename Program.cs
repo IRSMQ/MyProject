@@ -12,7 +12,6 @@ using Test26.ApiR;
 using System.Text.Json;
 using Test26.PasswordHassher;
 using Scalar.AspNetCore;
-using Test26.EventS;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,12 +71,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<PasswordHassherHandler>();
 builder.Services.AddScoped<TaskManagementService>();
-builder.Services.AddScoped<RoleService>();
-builder.Services.AddScoped<StatusService>();
-builder.Services.AddScoped<RolePermissionService>();
 builder.Services.AddScoped<LogService>();
 
 var app = builder.Build();

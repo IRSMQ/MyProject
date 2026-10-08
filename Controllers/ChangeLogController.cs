@@ -13,10 +13,12 @@ namespace Test26.Controller;
 public class ChangeLogController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
+    private readonly LogService _logService;
 
-    public ChangeLogController(ProjectManagementSystemContext context)
+    public ChangeLogController(ProjectManagementSystemContext context, LogService logService)
     {
         _context = context;
+        _logService = logService;
     }
 
     [HttpGet("all/{n}")]
@@ -62,6 +64,9 @@ public class ChangeLogController : ControllerBase
             ?? throw new KeyNotFoundException("There are no Change Log with this ID");
 
         entity.IsDeleted = true;
+
+        var logId = await _logService.Log("Delete", nameof(ChangeLog), id);
+        await _logService.ChangLog(logId, "false", "true", nameof(entity.IsDeleted));
         
         await _context.SaveChangesAsync();
 

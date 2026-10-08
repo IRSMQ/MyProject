@@ -4,6 +4,7 @@ using Test26.Context;
 using Test26.Models;
 using Test26.Service;
 using Test26.DTOs;
+using Test26.ApiR;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -92,11 +93,11 @@ public class ProjectController : ControllerBase
         };
 
         _context.Projects.Add(entity);
-        await _context.SaveChangesAsync();
 
         var logId = await _logService.Log("Create", nameof(Project), eid);
 
         var entry = _context.Entry(entity);
+        
         foreach (var prop in entry.Properties)
         {
             await _logService.ChangLog(
@@ -107,7 +108,9 @@ public class ProjectController : ControllerBase
             );
         }
 
-        return CreatedAtAction(nameof(GetById), new { id = entity.ProjectId }, ProjectToDto(entity));
+        await _context.SaveChangesAsync();
+
+        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Add Succeeded"));
     }
 
     [HttpDelete("delete/{id}")]
@@ -203,7 +206,7 @@ public class ProjectController : ControllerBase
     }
 
 
-    [HttpPatch("edit/date")]
+    [HttpPut("edit/date")]
     public async Task<IActionResult> EditDate([FromBody] EditAllDate editAllDate)
     {
         var entity = await _context.Projects
@@ -273,8 +276,6 @@ public class ProjectController : ControllerBase
             })
             .ToList();
 
-        await _context.SaveChangesAsync();
-
         if (modifiedProps.Any())
         {
             var tableName = _context.Model
@@ -286,6 +287,8 @@ public class ProjectController : ControllerBase
             foreach (var change in modifiedProps)
                 await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
         }
+
+        await _context.SaveChangesAsync();
 
         return Ok(ProjectToDto(entity));
     }

@@ -4,8 +4,11 @@ using Test26.Models;
 
 namespace Test26.DTOs;
 
-public partial class EditDate
+public partial class EditDates
 {
     public Guid ID { get; set; }
-    public DateTime? Date { get; set; }
+    public DateTime? CreateDate { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? DueDate { get; set; }
+    public DateTime? EndDate { get; set; }
 }

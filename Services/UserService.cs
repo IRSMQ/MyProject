@@ -9,7 +9,7 @@ using Humanizer;
 using Test26.PasswordHassher;
 using Microsoft.AspNetCore.Authorization;
 using System.Linq.Expressions;
-using Test26.EventS;
+using Test26.Service;
 
 namespace Test26.Service;
 
@@ -89,8 +89,6 @@ public class UserService : IUserService
             })
             .ToList();
 
-        await _context.SaveChangesAsync();
-
         if (modifiedProps.Any())
         {
             var tableName = _context.Model
@@ -101,9 +99,9 @@ public class UserService : IUserService
 
             foreach (var change in modifiedProps)
                 await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
-
-            await _context.SaveChangesAsync();
         }
+
+        await _context.SaveChangesAsync();
 
         return userToDto(entity);
     }
@@ -114,9 +112,11 @@ public class UserService : IUserService
 
         await _context.UserProjects
             .Where(up=>up.UserId == id)
-            .ExecuteDeleteAsync();
+            .ToListAsync();
 
-        _context.Users.Remove(user);
+        
+
+        
         await _context.SaveChangesAsync();
 
         return userToDto(user);
@@ -131,54 +131,6 @@ public class UserService : IUserService
         await _context.SaveChangesAsync();
 
         return userToDto(user);
-    }
-
-    // public async Task<UserDto> SignUp(UserSignupDto suser)
-    // {
-    //     var user = await _projectManagementSystemContext.Users.Where( u=> u.Username == suser.Username).FirstOrDefaultAsync();
-
-    //     if (user != null)
-    //         throw new InvalidOperationException("Username Exist");
-
-    //     if (suser.Username == "" || suser.UserPassword == "")
-    //             throw new ArgumentException("Username or Password is Null");
-
-    //     var newUser = new User
-    //     {
-    //         UserEmail = suser.UserEmail,
-    //         Username = suser.Username,
-    //         UserFullName = suser.UserFullName,
-    //         UserPassword = _passwordHassherHandler.Hash(suser.UserPassword),
-    //         UserPhone = suser.UserPhone
-    //     };
-
-    //     _projectManagementSystemContext.Users.Add(newUser);
-    //     await _projectManagementSystemContext.SaveChangesAsync();
-
-    //     return userToDto(newUser);
-    // }
-
-    private async Task<User> _FindAsync(Guid id)
-    {
-        var user = await _context.Users.FindAsync(id);
-        if (user == null)
-            throw new KeyNotFoundException($"User With ID {id} Not Exist");
-
-        return user;
-    }
-    private UserDto userToDto(User user)
-    {
-        var newUser = new UserDto
-            {
-                UserId = user.UserId,
-                UserFullName = user.UserFullName,
-                Username = user.Username,
-                Status = user.UserStatus,
-                Email = user.UserEmail,
-                Phone = user.UserPhone
-            };
-
-        return newUser;
     }
 
     public async Task<UserDto> EditStatus(UserEditStatus userEditStatus)
@@ -268,4 +220,55 @@ public class UserService : IUserService
         };
     }
 
+
+    private async Task<User> _FindAsync(Guid id)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(p => p.UserId == id && !((ISoftDeletable)p).IsDeleted)
+            ?? throw new KeyNotFoundException($"User With ID {id} Not Exist");
+
+        return user;
+    }
+    private UserDto userToDto(User user)
+    {
+        var newUser = new UserDto
+            {
+                UserId = user.UserId,
+                UserFullName = user.UserFullName,
+                Username = user.Username,
+                Status = user.UserStatus,
+                Email = user.UserEmail,
+                Phone = user.UserPhone
+            };
+
+        return newUser;
+    }
 }
+
+
+
+
+// public async Task<UserDto> SignUp(UserSignupDto suser)
+    // {
+    //     var user = await _projectManagementSystemContext.Users.Where( u=> u.Username == suser.Username).FirstOrDefaultAsync();
+
+    //     if (user != null)
+    //         throw new InvalidOperationException("Username Exist");
+
+    //     if (suser.Username == "" || suser.UserPassword == "")
+    //             throw new ArgumentException("Username or Password is Null");
+
+    //     var newUser = new User
+    //     {
+    //         UserEmail = suser.UserEmail,
+    //         Username = suser.Username,
+    //         UserFullName = suser.UserFullName,
+    //         UserPassword = _passwordHassherHandler.Hash(suser.UserPassword),
+    //         UserPhone = suser.UserPhone
+    //     };
+
+    //     _projectManagementSystemContext.Users.Add(newUser);
+    //     await _projectManagementSystemContext.SaveChangesAsync();
+
+    //     return userToDto(newUser);
+    // }

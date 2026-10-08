@@ -6,7 +6,8 @@ namespace Test26.DTOs;
 
 public partial class TMADto
 {
-    public Guid ProjectId { get; set; }
+    public Guid? TaskId { get; set; }
+    public Guid? ProjectId { get; set; }
 
     public Guid? StatusId { get; set; }
 
@@ -23,4 +24,6 @@ public partial class TMADto
     public DateTime? StartDate { get; set; } = DateTime.Now;
 
     public DateTime? DueDate { get; set; }
+
+    public DateTime? EndDate { get; set; }
 }

@@ -96,7 +96,7 @@ public class TaskManagementService
 
         var newTm = new TaskManagement
         {
-            ProjectId = tMADto.ProjectId,
+            ProjectId = tMADto.ProjectId.Value,
             StatusId = tMADto.StatusId,
             PriorityId = tMADto.PriorityId,
             ParentId = tMADto.ParentId,
@@ -281,7 +281,7 @@ public class TaskManagementService
     }
 
 
-    public async Task<TaskManagementDto> CreateDate(EditDate editDate)
+    public async Task<TaskManagementDto> CreateDate(EditDates editDate)
     {
         var tm = await _projectManagementSystemContext.TaskManagements
             .FindAsync(editDate.ID);
@@ -289,10 +289,10 @@ public class TaskManagementService
         if (tm == null)
             throw new KeyNotFoundException("Task Not Found");
 
-        if (editDate.Date == null)
+        if (editDate.CreateDate == null)
             throw new InvalidOperationException("The Creation Date must not be empty");
 
-        if (tm.StartDate < editDate.Date || tm.DueDate < editDate.Date || tm.CompletionDate < editDate.Date)
+        if (tm.StartDate < editDate.CreateDate || tm.DueDate < editDate.CreateDate || tm.CompletionDate < editDate.CreateDate)
             throw new InvalidOperationException("Creation/Start/Due Date > Date");
 
         var pr = await _projectManagementSystemContext.Projects
@@ -301,15 +301,15 @@ public class TaskManagementService
         if (pr == null)
             throw new KeyNotFoundException("Project Not Found");
             
-        if (pr.CreationDate > editDate.Date)
+        if (pr.CreationDate > editDate.CreateDate)
             throw new InvalidOperationException("Project Creation Date > Task Creation Date");
 
-        tm.CreationDate = editDate.Date.Value;
+        tm.CreationDate = editDate.CreateDate.Value;
         await _projectManagementSystemContext.SaveChangesAsync();
 
         return TaskToDto(tm);
     }
-    public async Task<TaskManagementDto> StartDate(EditDate editDate)
+    public async Task<TaskManagementDto> StartDate(EditDates editDate)
     {
         var tm = await _projectManagementSystemContext.TaskManagements
             .FindAsync(editDate.ID);
@@ -317,24 +317,24 @@ public class TaskManagementService
         if (tm == null)
             throw new KeyNotFoundException("Task Not Found");
 
-        if (editDate.Date == null)
+        if (editDate.CreateDate == null)
             throw new InvalidOperationException("The Start Date must not be empty");
 
-        if (tm.DueDate < editDate.Date || tm.CompletionDate < editDate.Date || tm.CreationDate > editDate.Date)
+        if (tm.DueDate < editDate.CreateDate || tm.CompletionDate < editDate.CreateDate || tm.CreationDate > editDate.CreateDate)
             throw new InvalidOperationException("Completion/Due Date > Date or Creation < Date");
 
         var pr = await _projectManagementSystemContext.Projects
             .FindAsync(tm.ProjectId);
 
-        if (pr == null || pr.StartDate > editDate.Date)
+        if (pr == null || pr.StartDate > editDate.CreateDate)
             throw new InvalidOperationException("Start Date Project > Start Date Task");
 
-        tm.StartDate = editDate.Date.Value;
+        tm.StartDate = editDate.CreateDate.Value;
         await _projectManagementSystemContext.SaveChangesAsync();
 
         return TaskToDto(tm);
     }
-    public async Task<TaskManagementDto> DueDate(EditDate editDate)
+    public async Task<TaskManagementDto> DueDate(EditDates editDate)
     {
         var tm = await _projectManagementSystemContext.TaskManagements
             .FindAsync(editDate.ID);
@@ -342,15 +342,15 @@ public class TaskManagementService
         if (tm == null)
             throw new KeyNotFoundException("Task Not Found");
 
-        if (tm.StartDate > editDate.Date || tm.CompletionDate < editDate.Date)
+        if (tm.StartDate > editDate.CreateDate || tm.CompletionDate < editDate.CreateDate)
             throw new InvalidOperationException("Creation/Start Date > Date");
 
-        tm.DueDate = editDate.Date;
+        tm.DueDate = editDate.CreateDate;
         await _projectManagementSystemContext.SaveChangesAsync();
 
         return TaskToDto(tm);
     }
-    public async Task<TaskManagementDto> CompletionDate(EditDate editDate)
+    public async Task<TaskManagementDto> CompletionDate(EditDates editDate)
     {
         var tm = await _projectManagementSystemContext.TaskManagements
             .FindAsync(editDate.ID);
@@ -358,7 +358,7 @@ public class TaskManagementService
         if (tm == null)
             throw new KeyNotFoundException("Task Not Found");
 
-        if (tm.CreationDate > editDate.Date || tm.StartDate > editDate.Date)
+        if (tm.CreationDate > editDate.CreateDate || tm.StartDate > editDate.CreateDate)
             throw new InvalidOperationException("Create/Start Date > Date");
 
         var pr = await _projectManagementSystemContext.Projects
@@ -367,10 +367,10 @@ public class TaskManagementService
         if (pr == null)
             throw new InvalidOperationException("Project Not Found");
 
-        if (pr.EndDate < editDate.Date)
-            throw new InvalidOperationException("TM Completion Date < Project Completion Date");
+        if (pr.EndDate < editDate.CreateDate)
+            throw new InvalidOperationException("TM Completion Date > Project Completion Date");
 
-        tm.CompletionDate = editDate.Date;
+        tm.CompletionDate = editDate.CreateDate;
         await _projectManagementSystemContext.SaveChangesAsync();
 
         return TaskToDto(tm);

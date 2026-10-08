@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Test26.ApiR;
 using Test26.Context;
 using Test26.DTOs;
 using Test26.Models;
+using Test26.Service;
 
 namespace Test26.Controllers;
 
@@ -11,16 +13,18 @@ namespace Test26.Controllers;
 public class RolePermissionController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
+    private readonly LogService _logService;
 
-    public RolePermissionController(ProjectManagementSystemContext context)
+    public RolePermissionController(ProjectManagementSystemContext context, LogService logService)
     {
         _context = context;
+        _logService = logService;
     }
 
     [HttpGet("all")]
     public async Task<IActionResult> GetAll()
     {
-        var rp = await _context.RolePermissions
+        var entity = await _context.RolePermissions
             .AsNoTracking()
             .Select(r => new RPDto
             {
@@ -31,17 +35,17 @@ public class RolePermissionController : ControllerBase
             })
             .ToListAsync();
 
-        if (rp.Count == 0)
+        if (entity.Count == 0)
             throw new InvalidOperationException("There are no RolePermissions");
 
-        return Ok(rp);
+        return Ok(ApiResponse<List<RPDto>>.Success(entity,$"Get All Succeeded"));
     }
 
 
     [HttpGet("byRole/{id}")]
     public async Task<IActionResult> GetByRoleId(Guid id)
     {
-        var rp = await _context.RolePermissions
+        var entity = await _context.RolePermissions
             .AsNoTracking()
             .Where(r => r.RoleId == id)
             .Select(r => new RPDto
@@ -53,17 +57,17 @@ public class RolePermissionController : ControllerBase
             })
             .ToListAsync();
 
-        if (rp.Count == 0)
+        if (entity.Count == 0)
             throw new KeyNotFoundException($"RolePermission With ID: {id} Not Exist");
 
-        return Ok(rp);
+        return Ok(ApiResponse<List<RPDto>>.Success(entity,$"Succeeded"));
     }
 
 
     [HttpGet("byPermission/{id:guid}")]
     public async Task<IActionResult> GetByPermissionId(Guid id)
     {
-        var rp = await _context.RolePermissions
+        var entity = await _context.RolePermissions
             .AsNoTracking()
             .Where(r => r.PermissionId == id)
             .Select(r => new RPDto
@@ -75,13 +79,13 @@ public class RolePermissionController : ControllerBase
             })
             .ToListAsync();
 
-        if (rp.Count == 0)
+        if (entity.Count == 0)
             throw new KeyNotFoundException($"RolePermission With ID: {id} Not Exist");
 
-        return Ok(rp);
+        return Ok(ApiResponse<List<RPDto>>.Success(entity,$"Succeeded"));
     }
 
-    [HttpPost]
+    [HttpPost("add")]
     public async Task<IActionResult> Add([FromBody] RPDtoAdd rPDtoAdd)
     {
         var r = await _context.Roles.FindAsync(rPDtoAdd.RoleID);
@@ -103,6 +107,9 @@ public class RolePermissionController : ControllerBase
         };
 
         _context.RolePermissions.Add(newRp);
+
+        var logId = await _logService.Log();
+        
         await _context.SaveChangesAsync();
 
         var result = new RPDto
@@ -113,11 +120,11 @@ public class RolePermissionController : ControllerBase
             PermissionName = p.PermissionName
         };
 
-        return Ok(result);
+        return Ok(ApiResponse<RPDto>.Success(r,$"Succeded"));
     }
 
 
-    [HttpDelete]
+    [HttpDelete("delete")]
     public async Task<IActionResult> Delete([FromBody] RPDtoAdd rPDtoAdd)
     {
         var r = await _context.Roles.FindAsync(rPDtoAdd.RoleID);
@@ -135,6 +142,7 @@ public class RolePermissionController : ControllerBase
             throw new KeyNotFoundException("RoleID or PermissionID Not Exist");
 
         _context.RolePermissions.Remove(rp);
+
         await _context.SaveChangesAsync();
 
         var result = new RPDto

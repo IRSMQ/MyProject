@@ -168,6 +168,9 @@ public partial class ProjectManagementSystemContext : DbContext
 
             entity.Property(e => e.PermissionId).HasColumnName("PermissionID");
             entity.Property(e => e.RoleId).HasColumnName("RoleID");
+            entity.Property(e => e.Rpid)
+                 .HasDefaultValueSql("(newid())", "DF_RolePermission_RPID")
+                 .HasColumnName("RPID");
             entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_RolePermission_SoftDelete");
 
             entity.HasOne(d => d.Permission).WithMany()
@@ -180,6 +183,19 @@ public partial class ProjectManagementSystemContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_RolePermission_Role");
         });
+
+        // modelBuilder.Entity<RolePermission>(entity =>
+        // {
+        //     entity
+        //         .HasNoKey()
+        //         .ToTable("RolePermission");
+
+        //     entity.Property(e => e.PermissionId).HasColumnName("PermissionID");
+        //     entity.Property(e => e.RoleId).HasColumnName("RoleID");
+        //     entity.Property(e => e.Rpid)
+        //         .HasDefaultValueSql("(newid())", "DF_RolePermission_RPID")
+        //         .HasColumnName("RPID");
+        // });
 
         modelBuilder.Entity<Status>(entity =>
         {
