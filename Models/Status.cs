@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Test26.Models;
 
-public partial class Status : ISoftDeletable
+public partial class Status
 {
     public Guid StatusId { get; set; }
 

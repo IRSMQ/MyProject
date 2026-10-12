@@ -50,15 +50,15 @@ public partial class ProjectManagementSystemContext : DbContext
     {
         modelBuilder.Entity<ChangeLog>(entity =>
         {
-            entity.HasKey(e => e.ChangeLogId).HasName("PK_ChangeLogs");
-
-            entity.Property(e => e.LogId).HasColumnName("LogID");
+            entity.Property(e => e.ChangeLogId)
+                .HasDefaultValueSql("(newid())", "DF_ChangeLogs_ChangeLogID")
+                .HasColumnName("ChangeLogID");
             entity.Property(e => e.ColumnName).HasMaxLength(40);
+            entity.Property(e => e.LogId).HasColumnName("LogID");
             entity.Property(e => e.NewValue).HasMaxLength(100);
             entity.Property(e => e.OldValue).HasMaxLength(100);
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_ChangeLogs_SoftDelete");
 
-            entity.HasOne(d => d.Log).WithMany()
+            entity.HasOne(d => d.Log).WithMany(p => p.ChangeLogs)
                 .HasForeignKey(d => d.LogId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChangeLogs_Log");
@@ -77,10 +77,10 @@ public partial class ProjectManagementSystemContext : DbContext
                 .HasDefaultValueSql("(getdate())", "DF_Event_Date")
                 .HasColumnType("datetime");
             entity.Property(e => e.LogType)
-                .HasMaxLength(20)
+                .HasMaxLength(10)
                 .IsUnicode(false);
             entity.Property(e => e.RelatedId).HasColumnName("RelatedID");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_Log_SoftDelete");
+            entity.Property(e => e.RelatedTableName).HasMaxLength(100);
             entity.Property(e => e.UserId).HasColumnName("UserID");
 
             entity.HasOne(d => d.User).WithMany(p => p.Logs)
@@ -96,7 +96,6 @@ public partial class ProjectManagementSystemContext : DbContext
                 .HasDefaultValueSql("(newid())", "DF_Permission_PermissionId")
                 .HasColumnName("PermissionID");
             entity.Property(e => e.PermissionName).HasMaxLength(50);
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_Permission_SoftDelete");
         });
 
         modelBuilder.Entity<Priority>(entity =>
@@ -107,7 +106,6 @@ public partial class ProjectManagementSystemContext : DbContext
                 .ValueGeneratedNever()
                 .HasColumnName("PriorityID");
             entity.Property(e => e.PriorityName).HasMaxLength(50);
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_Priority_SoftDelete");
         });
 
         modelBuilder.Entity<Project>(entity =>
@@ -130,7 +128,6 @@ public partial class ProjectManagementSystemContext : DbContext
             entity.Property(e => e.ProjectName)
                 .HasMaxLength(50)
                 .HasDefaultValue("Test", "DF_Project_ProjectName");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_Project_SoftDelete");
             entity.Property(e => e.StartDate)
                 .HasDefaultValueSql("(getdate())", "DF_Project_StartDate")
                 .HasColumnType("datetime");
@@ -157,45 +154,30 @@ public partial class ProjectManagementSystemContext : DbContext
                 .ValueGeneratedNever()
                 .HasColumnName("RoleID");
             entity.Property(e => e.RoleName).HasMaxLength(50);
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_Role_SoftDelete");
         });
 
         modelBuilder.Entity<RolePermission>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("RolePermission");
+            entity.HasKey(e => e.Rpid);
 
+            entity.ToTable("RolePermission");
+
+            entity.Property(e => e.Rpid)
+                .HasDefaultValueSql("(newid())", "DF_RolePermission_RPID")
+                .HasColumnName("RPID");
             entity.Property(e => e.PermissionId).HasColumnName("PermissionID");
             entity.Property(e => e.RoleId).HasColumnName("RoleID");
-            entity.Property(e => e.Rpid)
-                 .HasDefaultValueSql("(newid())", "DF_RolePermission_RPID")
-                 .HasColumnName("RPID");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_RolePermission_SoftDelete");
 
-            entity.HasOne(d => d.Permission).WithMany()
+            entity.HasOne(d => d.Permission).WithMany(p => p.RolePermissions)
                 .HasForeignKey(d => d.PermissionId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_RolePermission_Permission");
 
-            entity.HasOne(d => d.Role).WithMany()
+            entity.HasOne(d => d.Role).WithMany(p => p.RolePermissions)
                 .HasForeignKey(d => d.RoleId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_RolePermission_Role");
         });
-
-        // modelBuilder.Entity<RolePermission>(entity =>
-        // {
-        //     entity
-        //         .HasNoKey()
-        //         .ToTable("RolePermission");
-
-        //     entity.Property(e => e.PermissionId).HasColumnName("PermissionID");
-        //     entity.Property(e => e.RoleId).HasColumnName("RoleID");
-        //     entity.Property(e => e.Rpid)
-        //         .HasDefaultValueSql("(newid())", "DF_RolePermission_RPID")
-        //         .HasColumnName("RPID");
-        // });
 
         modelBuilder.Entity<Status>(entity =>
         {
@@ -206,7 +188,6 @@ public partial class ProjectManagementSystemContext : DbContext
             entity.Property(e => e.StatusId)
                 .HasDefaultValueSql("(newid())", "DF_Status_StatusId")
                 .HasColumnName("StatusID");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_Status_SoftDelete");
             entity.Property(e => e.StatusName).HasMaxLength(100);
         });
 
@@ -226,7 +207,6 @@ public partial class ProjectManagementSystemContext : DbContext
             entity.Property(e => e.ParentId).HasColumnName("ParentID");
             entity.Property(e => e.PriorityId).HasColumnName("PriorityID");
             entity.Property(e => e.ProjectId).HasColumnName("ProjectID");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_TaskManagement_SoftDelete");
             entity.Property(e => e.StartDate).HasColumnType("datetime");
             entity.Property(e => e.StatusId).HasColumnName("StatusID");
             entity.Property(e => e.Title).HasMaxLength(50);
@@ -255,7 +235,6 @@ public partial class ProjectManagementSystemContext : DbContext
                 .HasNoKey()
                 .ToTable("TaskUser");
 
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_TaskUser_SoftDelete");
             entity.Property(e => e.TaskId).HasColumnName("TaskID");
             entity.Property(e => e.UserId).HasColumnName("UserID");
 
@@ -281,7 +260,6 @@ public partial class ProjectManagementSystemContext : DbContext
                 .HasDefaultValueSql("(getdate())", "DF_User_CreationDate")
                 .HasColumnType("datetime");
             entity.Property(e => e.RoleId).HasColumnName("RoleID");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_User_SoftDelete");
             entity.Property(e => e.UserEmail)
                 .HasMaxLength(50)
                 .IsUnicode(false);
@@ -307,10 +285,14 @@ public partial class ProjectManagementSystemContext : DbContext
                 .HasNoKey()
                 .ToTable("UserPermission");
 
-            entity.Property(e => e.Int).HasColumnName("int");
+            entity.Property(e => e.Bit)
+                .HasDefaultValue(true, "DF_UserPermission_bit")
+                .HasColumnName("bit");
             entity.Property(e => e.PermissionId).HasColumnName("PermissionID");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_UserPermission_SoftDelete");
             entity.Property(e => e.UserId).HasColumnName("UserID");
+            entity.Property(e => e.UserPermissionId)
+                .HasDefaultValueSql("(newid())", "DF_UserPermission_UserPermissionID")
+                .HasColumnName("UserPermissionID");
 
             entity.HasOne(d => d.Permission).WithMany()
                 .HasForeignKey(d => d.PermissionId)
@@ -330,7 +312,6 @@ public partial class ProjectManagementSystemContext : DbContext
                 .ToTable("UserProject");
 
             entity.Property(e => e.ProjectId).HasColumnName("ProjectID");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(true, "DF_UserProject_SoftDelete");
             entity.Property(e => e.UserId).HasColumnName("UserID");
 
             entity.HasOne(d => d.Project).WithMany()

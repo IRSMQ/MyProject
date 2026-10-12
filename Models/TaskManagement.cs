@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Test26.Models;
 
-public partial class TaskManagement : ISoftDeletable
+public partial class TaskManagement
 {
     public Guid TaskManagementId { get; set; }
 

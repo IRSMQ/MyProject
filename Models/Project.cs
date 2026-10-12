@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Test26.Models;
 
-public partial class Project : ISoftDeletable
+public partial class Project
 {
     public Guid ProjectId { get; set; }
 

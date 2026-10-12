@@ -3,13 +3,15 @@ using System.Collections.Generic;
 
 namespace Test26.Models;
 
-public partial class UserPermission : ISoftDeletable
+public partial class UserPermission
 {
+    public Guid? UserPermissionId { get; set; }
+
     public Guid UserId { get; set; }
 
     public Guid PermissionId { get; set; }
 
-    public byte Int { get; set; }
+    public bool Bit { get; set; }
 
     public bool IsDeleted { get; set; }
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Test26.Models;
 
-public partial class TaskUser : ISoftDeletable
+public partial class TaskUser
 {
     public Guid TaskId { get; set; }
 
