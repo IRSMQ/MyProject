@@ -5,7 +5,7 @@ namespace Test26.Models;
 
 public partial class UserPermission
 {
-    public Guid? UserPermissionId { get; set; }
+    public Guid UserPermissionId { get; set; }
 
     public Guid UserId { get; set; }
 

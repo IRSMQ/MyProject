@@ -1,457 +1,647 @@
-// using System.Linq.Expressions;
-// using Microsoft.AspNetCore.Mvc;
-// using Microsoft.EntityFrameworkCore;
-// using Test26.Context;
-// using Test26.DTOs;
-// using Test26.Models;
-// using Test26.Service;
-
-// namespace Test26.Controllers;
-
-// [ApiController]
-// [Route("api/[controller]")]
-// public class TaskManagementController : ControllerBase
-// {
-//     private readonly ProjectManagementSystemContext _context;
-//     private readonly LogService _logService;
-
-//     public TaskManagementController(ProjectManagementSystemContext context, LogService logService)
-//     {
-//         _context = context;
-//         _logService = logService;
-//     }
-
-//     [HttpGet("all")]
-//     public async Task<ActionResult<List<TaskManagementDto>>> GetAll()
-//     {
-//         var tm = await _context.TaskManagements
-//             .Where(r => !((ISoftDeletable)r).IsDeleted)
-//             .Select(r => new TaskManagementDto
-//             {
-//                 TaskManagementId = r.TaskManagementId,
-//                 ProjectId = r.ProjectId,
-//                 StatusId = r.StatusId,
-//                 PriorityId = r.PriorityId,
-//                 ParentId = r.ParentId,
-
-//                 ProjectName = r.Project.ProjectName,
-//                 StatusName = r.Status.StatusName,
-//                 PriorityName = r.Priority.PriorityName,
-//                 ParentName = r.Parent != null ? r.Parent.Title : null,
-
-//                 Title = r.Title,
-//                 Desc = r.Desc,
-//                 CreationDate = r.CreationDate,
-//                 StartDate = r.StartDate,
-//                 DueDate = r.DueDate,
-//                 CompletionDate = r.CompletionDate
-//             })
-//             .ToListAsync();
-
-//         if (tm.Count == 0)
-//             throw new InvalidOperationException("Task Managements Empity");
-
-//         return Ok(tm);
-//     }
-
-//     [HttpGet("byid/{id:guid}")]
-//     public async Task<ActionResult<TaskManagementDto>> GetById(Guid id)
-//     {
-//         var tm = await _context.TaskManagements
-//             .Include(r => r.Project)
-//             .Include(r => r.Status)
-//             .Include(r => r.Priority)
-//             .Include(r => r.Parent)
-//             .FirstOrDefaultAsync(t => t.TaskManagementId == id && !((ISoftDeletable)t).IsDeleted);
-
-//         if (tm == null)
-//             throw new KeyNotFoundException($"Task with ID {id} Not Found");
-
-//         return Ok(TaskToDto(tm));
-//     }
-
-//     [HttpPost("add")]
-//     public async Task<ActionResult<TaskManagementDto>> Add([FromBody] TMADto dto)
-//     {
-//         if (!dto.TaskId.HasValue)
-//         {
-//             var entity = await _context.TaskManagements
-//                 .AnyAsync(t => t.Title == dto.Title && t.ProjectId == dto.ProjectId && t.ParentId == dto.ParentId && !((ISoftDeletable)t).IsDeleted);
-
-//             if (entity)
-//                 throw new InvalidOperationException("Task Exist");
-
-//             if (dto.ParentId.HasValue)
-//             {
-//                 var tm = await _context.TaskManagements
-//                     .FirstOrDefaultAsync(t => t.TaskManagementId == dto.ParentId && !((ISoftDeletable)t).IsDeleted)
-//                     ?? throw new KeyNotFoundException("Parent Not Found");
-
-//                 dto.ProjectId = tm.ProjectId;
-//             }
-//             else
-//             {
-//                 if (dto.ProjectId.HasValue)
-//                 {
-//                     var tm = await _context.Projects
-//                         .FirstOrDefaultAsync(p => p.ProjectId == dto.ProjectId)
-//                         ?? throw new KeyNotFoundException("Project Not Found");
-//                 }
-//                 else
-//                     throw new InvalidOperationException("The project cannot be empty");
-//             }
-
-//             if (!dto.CreationDate.HasValue)
-//                 dto.CreationDate = DateTime.Now;
-
-//             if (dto.DueDate.HasValue)
-//                 if (dto.CreationDate > dto.DueDate)
-//                     throw new InvalidOperationException("Creation Date > Due Date");
-
-//             if (dto.StartDate.HasValue)
-//                 if (dto.CreationDate > dto.StartDate)
-//                     throw new InvalidOperationException("Creation Date > Start Date");
-
-//             if (dto.EndDate.HasValue && dto.StartDate.HasValue)
-//             {
-//                 if (dto.StartDate.HasValue)
-//                     if (dto.StartDate > dto.EndDate)
-//                         throw new InvalidOperationException("Start Date > End Date");
-
-//                 else
-//                     throw new InvalidOperationException("End Date Has Value And Start Date Empity");
-//             }   
-
-//             if (dto.StatusId.HasValue)
-//             {
-//                 var st = _context.Statuses
-//                     .FirstOrDefaultAsync(p => p.StatusId == dto.StatusId)
-//                     ?? throw new KeyNotFoundException("Status Not Found");
-//             }
-
-//             if (dto.PriorityId.HasValue)
-//             {
-//                 var pr = _context.Priorities
-//                     .FirstOrDefaultAsync(p => p.PriorityId == dto.PriorityId)
-//                     ?? throw new KeyNotFoundException("Priority Not Found");
-//             }
-
-//             var taskId = NewTaskManagement(dto);
-
-//             var logId = await _logService.Log("Add",nameof(taskId), taskId);
-
-            
-//         }
-//         else
-//         {
-            
-//         }
-//     }
-
-//     [HttpDelete("delete/{id:guid}")]
-//     public async Task<ActionResult<TaskManagementDto>> Delete(Guid id)
-//     {
-//         var tm = await _context.TaskManagements
-//             .Include(r => r.Project)
-//             .Include(r => r.Status)
-//             .Include(r => r.Priority)
-//             .Include(r => r.Parent)
-//             .FirstOrDefaultAsync(t => t.TaskManagementId == id && !((ISoftDeletable)t).IsDeleted);
-
-//         if (tm == null)
-//             throw new KeyNotFoundException("Task Not Found");
-
-//         var exist = await _context.TaskManagements
-//             .AnyAsync(r => r.ParentId == id);
-
-//         if (exist)
-//             throw new InvalidOperationException("This task has a sub-task");
+using System.Linq.Expressions;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Test26.ApiR;
+using Test26.Context;
+using Test26.DTOs;
+using Test26.Models;
+using Test26.Service;
+
+namespace Test26.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class TaskManagementController : ControllerBase
+{
+    private readonly ProjectManagementSystemContext _context;
+    private readonly LogService _logService;
+
+    public TaskManagementController(ProjectManagementSystemContext context, LogService logService)
+    {
+        _context = context;
+        _logService = logService;
+    }
+
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAll()
+    {
+        var entity = await _context.TaskManagements
+            .Include(e => e.Project)
+            .Include(e => e.Status)
+            .Include(e => e.Priority)
+            .Include(e => e.Parent)
+            .Where(e => !e.IsDeleted)
+            .Select(e => new TaskManagementDto
+            {
+                TaskManagementId = e.TaskManagementId,
+                ProjectId = e.ProjectId,
+                StatusId = e.StatusId,
+                PriorityId = e.PriorityId,
+                ParentId = e.ParentId,
+
+                ProjectName = e.Project.ProjectName,
+                StatusName = e.Status.StatusName,
+                PriorityName = e.Priority.PriorityName,
+                ParentName = e.Parent != null ? e.Parent.Title : null,
+
+                Title = e.Title,
+                Desc = e.Desc,
+                CreationDate = e.CreationDate,
+                StartDate = e.StartDate,
+                DueDate = e.DueDate,
+                CompletionDate = e.CompletionDate
+            })
+            .ToListAsync();
+
+        if (entity.Count == 0)
+            throw new InvalidOperationException("Task Managements Empity");
+
+        return Ok(ApiResponse<List<TaskManagementDto>>.Success(entity,$"Get All Succeeded"));
+    }
+
+    [HttpGet("byid/{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var entity = await _context.TaskManagements
+            .Include(e => e.Project)
+            .Include(e => e.Status)
+            .Include(e => e.Priority)
+            .Include(e => e.Parent)
+            .FirstOrDefaultAsync(e => e.TaskManagementId == id && !e.IsDeleted)
+            ?? throw new KeyNotFoundException($"Task with ID {id} Not Found");
+
+        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Get By ID Succeeded"));
+    }
+
+    [HttpPatch("edit/status")]
+    public async Task<IActionResult> Status([FromBody] TaskEditObject dto)
+    {
+        var exist = await _context.Statuses
+            .AnyAsync(e => e.StatusId == dto.ObjectId && !e.IsDeleted);
+
+        if (!exist)
+            throw new KeyNotFoundException("Status Not Found");
+
+        var entity = await _context.TaskManagements
+            .Include(e => e.Project)
+            .Include(e => e.Status)
+            .Include(e => e.Priority)
+            .Include(e => e.Parent)
+            .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskID && !e.IsDeleted)
+            ?? throw new KeyNotFoundException("Task Not Found");
+
+        if (entity.Project != null && entity.Project.StatusId != null && entity.Project.StatusId == Guid.Parse("DB303C22-BB2F-438A-BDE0-401CFCA15B5C") && dto.ObjectId == Guid.Parse("8569E5B3-46BD-4070-BCC2-18AB1DC94F26"))
+            throw new InvalidOperationException("When Project Complete, can't edit Task Status into InProgress");
+
+        var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
+
+        await _logService.ChangLog(
+            logId,
+            entity.Status?.ToString() ?? "null",
+            dto.ObjectId?.ToString() ?? "null",
+            nameof(entity.Desc)
+        );
 
-//         _context.TaskManagements.Remove(tm);
-//         await _context.SaveChangesAsync();
+        entity.StatusId = dto.ObjectId;
 
-//         return Ok(TaskToDto(tm));
-//     }
-
-//     [HttpPatch("edit/status")]
-//     public async Task<ActionResult<TaskManagementDto>> Status([FromBody] TaskEditObject taskEditObject)
-//     {
-//         var exist = await _context.Statuses
-//             .AnyAsync(t => t.StatusId == taskEditObject.ObjectId);
+        await _context.SaveChangesAsync();
 
-//         if (!exist)
-//             throw new KeyNotFoundException("Status Not Found");
+        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Status Succeeded"));
+    }
 
-//         var tm = await _context.TaskManagements
-//             .Include(r => r.Project)
-//             .Include(r => r.Status)
-//             .Include(r => r.Priority)
-//             .Include(r => r.Parent)
-//             .FirstOrDefaultAsync(t => t.TaskManagementId == taskEditObject.TaskID);
-
-//         if (tm == null)
-//             throw new KeyNotFoundException("Task Not Found");
+    [HttpPatch("edit/priority")]
+    public async Task<IActionResult> Priority([FromBody] TaskEditObject dto)
+    {
+        var entity = await _context.TaskManagements
+            .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskID && !e.IsDeleted)
+            ?? throw new KeyNotFoundException("Task Not Found");
 
-//         if (tm.Project != null && tm.Project.StatusId != null && tm.Project.StatusId == Guid.Parse("DB303C22-BB2F-438A-BDE0-401CFCA15B5C") && taskEditObject.ObjectId == Guid.Parse("8569E5B3-46BD-4070-BCC2-18AB1DC94F26"))
-//             throw new InvalidOperationException("When Project Complete, can't edit Task Status into InProgress");
+        var exist = await _context.Priorities
+            .AnyAsync(e => e.PriorityId == dto.ObjectId);
 
-//         tm.StatusId = taskEditObject.ObjectId;
+        if (!exist)
+            throw new KeyNotFoundException("Priority Not Found");
 
-//         await _context.SaveChangesAsync();
+        var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
 
-//         return Ok(TaskToDto(tm));
-//     }
+        await _logService.ChangLog(
+            logId,
+            entity.PriorityId?.ToString() ?? "null",
+            dto.ObjectId?.ToString() ?? "null",
+            nameof(entity.PriorityId)
+        );
 
-//     [HttpPatch("edit/priority")]
-//     public async Task<ActionResult<TaskManagementDto>> Priority([FromBody] TaskEditObject taskEditObject)
-//     {
-//         var result = await _context.TaskManagements
-//             .FirstOrDefaultAsync(t => t.TaskManagementId == taskEditObject.TaskID && !((ISoftDeletable)t).IsDeleted);
+        entity.PriorityId = dto.ObjectId;
 
-//         return Ok(result);
-//     }
+        await _context.SaveChangesAsync();
 
-//     [HttpPatch("edit/parent")]
-//     public async Task<ActionResult<TaskManagementDto>> Parent([FromBody] TMEPDto tMEPDto)
-//     {
-//         var tm = await _context.TaskManagements
-//             .FirstOrDefaultAsync(t => t.TaskManagementId == tMEPDto.TaskID);
+        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Priority Succeeded"));
+    }
 
-//         if (tm == null)
-//             throw new KeyNotFoundException("Task Not Found");
+    [HttpPatch("edit/parent")]
+    public async Task<IActionResult> Parent([FromBody] TMEPDto dto)
+    {
+        var entity = await _context.TaskManagements
+            .FirstOrDefaultAsync(t => t.TaskManagementId == dto.TaskID)
+            ?? throw new KeyNotFoundException("Task Not Found");
 
-//         if (tMEPDto.ObjectId != null)
-//         {
-//             if (tMEPDto.TaskID == tMEPDto.ObjectId)
-//                 throw new InvalidOperationException("Task cannot be its own Parent");
+        if (dto.ObjectId != null)
+        {
+            if (dto.TaskID == dto.ObjectId)
+                throw new InvalidOperationException("Task cannot be its own Parent");
 
-//             var exist = await _context.TaskManagements
-//                 .AnyAsync(t => t.TaskManagementId == tMEPDto.ObjectId);
+            var exist = await _context.TaskManagements
+                .AnyAsync(e => e.TaskManagementId == dto.ObjectId);
 
-//             if (!exist)
-//                 throw new KeyNotFoundException("Parent Not Found");
+            if (!exist)
+                throw new KeyNotFoundException("Parent Not Found");
 
-//             var ptm = await _context.TaskManagements
-//                 .FirstOrDefaultAsync(t => t.TaskManagementId == tMEPDto.ObjectId);
+            var ptm = await _context.TaskManagements
+                .FirstOrDefaultAsync(e => e.TaskManagementId == dto.ObjectId);
 
-//             if (ptm == null || tm.ProjectId != ptm.ProjectId)
-//                 throw new InvalidOperationException("The Projects are not coordinated");
+            if (ptm == null || entity.ProjectId != ptm.ProjectId)
+                throw new InvalidOperationException("The Projects are not coordinated");
 
-//             var curentId = tMEPDto.ObjectId;
-//             var visited = new HashSet<Guid> { tMEPDto.TaskID };
+            var curentId = dto.ObjectId;
+            var visited = new HashSet<Guid> { dto.TaskID };
 
-//             while (curentId != null)
-//             {
-//                 if (!visited.Add(curentId.Value))
-//                     throw new InvalidOperationException("Circular reference detected");
+            while (curentId != null)
+            {
+                if (!visited.Add(curentId.Value))
+                    throw new InvalidOperationException("Circular reference detected");
 
-//                 var parent = await _context.TaskManagements
-//                     .Where(t => t.TaskManagementId == curentId.Value)
-//                     .Select(t => t.ParentId)
-//                     .FirstOrDefaultAsync();
+                var parent = await _context.TaskManagements
+                    .Where(t => t.TaskManagementId == curentId.Value)
+                    .Select(t => t.ParentId)
+                    .FirstOrDefaultAsync();
 
-//                 if (parent == null)
-//                     break;
+                if (parent == null)
+                    break;
 
-//                 if (parent == tMEPDto.TaskID)
-//                     throw new InvalidOperationException("Circular reference");
+                if (parent == dto.TaskID)
+                    throw new InvalidOperationException("Circular reference");
 
-//                 curentId = parent;
-//             }
-//         }
+                curentId = parent;
+            }
+        }
 
-//         tm.ParentId = tMEPDto.ObjectId;
+        var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
 
-//         await _context.SaveChangesAsync();
+        await _logService.ChangLog(
+            logId,
+            entity.ParentId?.ToString() ?? "null",
+            dto.ObjectId?.ToString() ?? "null",
+            nameof(entity.ParentId)
+        );
 
-//         return Ok(TaskToDto(tm));
-//     }
+        entity.ParentId = dto.ObjectId;
 
-//     [HttpPatch("edit/title")]
-//     public async Task<ActionResult<TaskManagementDto>> Title([FromBody] EditString editString)
-//     {
-//         var tm = await _context.TaskManagements
-//             .FindAsync(editString.TaskID);
+        await _context.SaveChangesAsync();
 
-//         if (tm == null)
-//             throw new KeyNotFoundException("Task Not Found");
+        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Parent Succeeded"));
+    }
 
-//         if (editString.Text == null)
-//             throw new InvalidOperationException("Title is Null");
+    [HttpPatch("edit/title")]
+    public async Task<IActionResult> Title([FromBody] EditString editString)
+    {
+        var entity = await _context.TaskManagements
+            .FindAsync(editString.TaskID);
 
-//         var tm2 = await _context.TaskManagements
-//             .Where(t => t.ProjectId == tm.ProjectId && t.ParentId == tm.ParentId)
-//             .ToListAsync();
+        if (entity == null)
+            throw new KeyNotFoundException("Task Not Found");
 
-//         foreach (var t in tm2)
-//         {
-//             if (t.Title == editString.Text)
-//                 throw new InvalidOperationException("This name is a duplicate within this project and task");
-//         }
+        if (editString.Text == null)
+            throw new InvalidOperationException("Title is Null");
 
-//         tm.Title = editString.Text;
+        var tm2 = await _context.TaskManagements
+            .Where(t => t.ProjectId == entity.ProjectId && t.ParentId == entity.ParentId)
+            .ToListAsync();
 
-//         await _context.SaveChangesAsync();
+        foreach (var t in tm2)
+        {
+            if (t.Title == editString.Text)
+                throw new InvalidOperationException("This name is a duplicate within this project and task");
+        }
 
-//         return Ok(TaskToDto(tm));
-//     }
+        var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
 
-//     [HttpPatch("edit/desc")]
-//     public async Task<ActionResult<TaskManagementDto>> Desc([FromBody] EditString editString)
-//     {
-//         var tm = await _context.TaskManagements
-//             .FindAsync(editString.TaskID);
+        await _logService.ChangLog(
+            logId,
+            entity.Title?.ToString() ?? "null",
+            editString.Text?.ToString() ?? "null",
+            nameof(entity.Title)
+        );
 
-//         if (tm == null)
-//             throw new KeyNotFoundException("Task Not Found");
+        entity.Title = editString.Text;
 
-//         tm.Desc = editString.Text;
+        await _context.SaveChangesAsync();
 
-//         await _context.SaveChangesAsync();
+        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Title Succeeded"));
+    }
 
-//         return Ok(TaskToDto(tm));
-//     }
+    [HttpPatch("edit/desc")]
+    public async Task<IActionResult> Desc([FromBody] EditString editString)
+    {
+        var entity = await _context.TaskManagements
+            .FindAsync(editString.TaskID);
 
-//     [HttpPut("edit/date")]
-//     public async Task<ActionResult<TaskManagementDto>> EditDate([FromBody] EditDates editDate)
-//     {
-//         var entity = await _context.TaskManagements
-//             .FindAsync(editDate.ID);
+        if (entity == null)
+            throw new KeyNotFoundException("Task Not Found");
 
-//         if (entity == null)
-//             throw new KeyNotFoundException("Task Not Found");
+        var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
 
-//         if (editDate.CreateDate.HasValue)
-//         {
-//             if (entity.StartDate < editDate.CreateDate || entity.DueDate < editDate.CreateDate || entity.CompletionDate < editDate.CreateDate)
-//                 throw new InvalidOperationException("Creation/Start/Due Date > Date");
+        await _logService.ChangLog(
+            logId,
+            entity.Desc?.ToString() ?? "null",
+            editString.Text?.ToString() ?? "null",
+            nameof(entity.Desc)
+        );
 
-//             var pr = await _context.Projects
-//                 .FindAsync(entity.ProjectId);
+        entity.Desc = editString.Text;
 
-//             if (pr == null)
-//                 throw new KeyNotFoundException("Project Not Found");
+        await _context.SaveChangesAsync();
 
-//             if (pr.CreationDate > editDate.CreateDate)
-//                 throw new InvalidOperationException("Project Creation Date > Task Creation Date");
+        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Desc Succeeded"));
+    }
 
-//             entity.CreationDate = editDate.CreateDate.Value;
-//         }
+    [HttpPut("edit/date")]
+    public async Task<IActionResult> EditDate([FromBody] EditDates editDate)
+    {
+        var entity = await _context.TaskManagements
+            .FindAsync(editDate.ID);
 
-//         if (editDate.StartDate.HasValue)
-//         {
-//             if (entity.DueDate < editDate.StartDate || entity.CompletionDate < editDate.StartDate || entity.CreationDate > editDate.StartDate)
-//                 throw new InvalidOperationException("Completion/Due Date < Start Date or Creation Date > Start Date");
+        if (entity == null)
+            throw new KeyNotFoundException("Task Not Found");
 
-//             var pr = await _context.Projects
-//                 .FindAsync(entity.ProjectId)
-//                 ?? throw new KeyNotFoundException("No Project was found for this Task");
+        if (editDate.CreateDate.HasValue)
+        {
+            if (entity.StartDate < editDate.CreateDate || entity.DueDate < editDate.CreateDate || entity.CompletionDate < editDate.CreateDate)
+                throw new InvalidOperationException("Creation/Start/Due Date > Date");
 
-//             if (pr.StartDate > editDate.StartDate)
-//                 throw new InvalidOperationException("Start Date Project > Start Date Task");
+            var pr = await _context.Projects
+                .FindAsync(entity.ProjectId);
 
-//             entity.StartDate = editDate.StartDate.Value;
-//         }
+            if (pr == null)
+                throw new KeyNotFoundException("Project Not Found");
 
-//         if (editDate.DueDate.HasValue)
-//         {
-//             if (entity.StartDate > editDate.DueDate || entity.CreationDate > editDate.DueDate)
-//                 throw new InvalidOperationException("Creation/Start Date > Date");
+            if (pr.CreationDate > editDate.CreateDate)
+                throw new InvalidOperationException("Project Creation Date > Task Creation Date");
 
-//             entity.DueDate = editDate.DueDate.Value;
-//         }
+            entity.CreationDate = editDate.CreateDate.Value;
+        }
 
-//         if (editDate.EndDate.HasValue)
-//         {
-//             if (entity.CreationDate > editDate.EndDate || entity.StartDate > editDate.EndDate)
-//                 throw new InvalidOperationException("Create/Start Date > End Date");
+        if (editDate.StartDate.HasValue)
+        {
+            if (entity.DueDate < editDate.StartDate || entity.CompletionDate < editDate.StartDate || entity.CreationDate > editDate.StartDate)
+                throw new InvalidOperationException("Completion/Due Date < Start Date or Creation Date > Start Date");
 
-//             var pr = await _context.Projects
-//                 .FindAsync(entity.ProjectId);
+            var pr = await _context.Projects
+                .FindAsync(entity.ProjectId)
+                ?? throw new KeyNotFoundException("No Project was found for this Task");
 
-//             if (pr == null)
-//                 throw new InvalidOperationException("Project Not Found");
+            if (pr.StartDate > editDate.StartDate)
+                throw new InvalidOperationException("Start Date Project > Start Date Task");
 
-//             if (pr.EndDate < editDate.EndDate)
-//                 throw new InvalidOperationException("TM Completion Date > Project Completion Date");
+            entity.StartDate = editDate.StartDate.Value;
+        }
 
-//             entity.CompletionDate = editDate.EndDate;
-//         }
+        if (editDate.DueDate.HasValue)
+        {
+            if (entity.StartDate > editDate.DueDate || entity.CreationDate > editDate.DueDate)
+                throw new InvalidOperationException("Creation/Start Date > Date");
 
-//         var entiry = _context.TaskManagements.Entry(entity);
+            entity.DueDate = editDate.DueDate.Value;
+        }
 
-//         var modifiedProps = entiry.Properties
-//             .Where(p => p.IsModified)
-//             .Select(p => new
-//             {
-//                 ColumnName = entiry.Metadata.Name,
-//                 OldVal = entiry.OriginalValues?.ToString() ?? "null",
-//                 NewVal = entiry.CurrentValues?.ToString() ?? "null"
-//             })
-//             .ToList();
+        if (editDate.EndDate.HasValue)
+        {
+            if (entity.CreationDate > editDate.EndDate || entity.StartDate > editDate.EndDate)
+                throw new InvalidOperationException("Create/Start Date > End Date");
 
-//         if (modifiedProps.Any())
-//         {
-//             var tableName = _context.Model
-//                 .FindEntityType(typeof(TaskManagement))?
-//                 .GetTableName() ?? nameof(TaskManagement);
+            var pr = await _context.Projects
+                .FindAsync(entity.ProjectId);
 
-//             var logid = await _logService.Log("Edit", tableName, entity.TaskManagementId);
+            if (pr == null)
+                throw new InvalidOperationException("Project Not Found");
 
-//             foreach (var m in modifiedProps)
-//                 await _logService.ChangLog(logid, m.OldVal, m.NewVal, m.ColumnName);
-//         }
+            if (pr.EndDate < editDate.EndDate)
+                throw new InvalidOperationException("TM Completion Date > Project Completion Date");
+
+            entity.CompletionDate = editDate.EndDate;
+        }
+
+        var entiry = _context.TaskManagements.Entry(entity);
+
+        var modifiedProps = entiry.Properties
+            .Where(p => p.IsModified)
+            .Select(p => new
+            {
+                ColumnName = entiry.Metadata.Name,
+                OldVal = entiry.OriginalValues?.ToString() ?? "null",
+                NewVal = entiry.CurrentValues?.ToString() ?? "null"
+            })
+            .ToList();
+
+        if (modifiedProps.Any())
+        {
+            var tableName = _context.Model
+                .FindEntityType(typeof(TaskManagement))?
+                .GetTableName() ?? nameof(TaskManagement);
+
+            var logid = await _logService.Log("Edit", tableName, entity.TaskManagementId);
+
+            foreach (var m in modifiedProps)
+                await _logService.ChangLog(logid, m.OldVal, m.NewVal, m.ColumnName);
+        }
         
-//         await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
-//         return Ok(TaskToDto(entity));
-//     }
+        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Date Succeeded"));
+    }
 
-//     private TaskManagementDto TaskToDto(TaskManagement taskManagement)
-//     {
-//         return new TaskManagementDto
-//         {
-//             TaskManagementId = taskManagement.TaskManagementId,
-//             ProjectId = taskManagement.ProjectId,
-//             StatusId = taskManagement.StatusId,
-//             PriorityId = taskManagement.PriorityId,
-//             ParentId = taskManagement.ParentId,
+    [HttpPost("add")]
+    public async Task<IActionResult> Add([FromBody] TMDtoAdd dto)
+    {
 
-//             ProjectName = taskManagement.Project?.ProjectName,
-//             StatusName = taskManagement.Status?.StatusName,
-//             PriorityName = taskManagement.Priority?.PriorityName,
-//             ParentName = taskManagement.Parent?.Title,
+        var exist = await _context.TaskManagements
+            .AnyAsync(e => e.Title == dto.Title && e.ProjectId == dto.ProjectId && e.ParentId == dto.ParentId && !e.IsDeleted);
 
-//             Title = taskManagement.Title,
-//             Desc = taskManagement.Desc,
-//             CreationDate = taskManagement.CreationDate,
-//             StartDate = taskManagement.StartDate,
-//             DueDate = taskManagement.DueDate,
-//             CompletionDate = taskManagement.CompletionDate
-//         };
-//     }
+        if (exist)
+            throw new InvalidOperationException("Task With this Title, Parent, Project Exist");
 
-//     private Guid NewTaskManagement(TMADto dto)
-//     {
-//         var tkId = Guid.NewGuid();
+        var entity = new TaskManagement();
+        
 
-//         var newTask = new TaskManagement
-//         {
-//             TaskManagementId = tkId,
-//             ProjectId = dto.ProjectId.Value,
-//             StatusId = dto.StatusId,
-//             PriorityId = dto.PriorityId,
-//             ParentId = dto.ParentId,
-//             Title = dto.Title,
-//             Desc = dto.Desc,
-//             CreationDate = dto.CreationDate,
-//             StartDate = dto.StartDate,
-//             DueDate = dto.DueDate,
-//             CompletionDate = dto.EndDate
-//         };
+        if (!dto.TaskId.HasValue)
+        {
+            if (dto.ParentId.HasValue)
+            {
+                var entityTaskManagement = await _context.TaskManagements
+                    .FirstOrDefaultAsync(e => e.TaskManagementId == dto.ParentId && !e.IsDeleted)
+                    ?? throw new KeyNotFoundException("Parent Not Found");
 
-//         _context.TaskManagements.Add(newTask);
+                dto.ProjectId = entityTaskManagement.ProjectId;
+            }
+            else
+            {
+                if (dto.ProjectId.HasValue)
+                {
+                    var entityProject = await _context.Projects
+                        .FirstOrDefaultAsync(e => e.ProjectId == dto.ProjectId)
+                        ?? throw new KeyNotFoundException("Project Not Found");
+                }
+                else
+                    throw new InvalidOperationException("The project cannot be empty");
+            }
 
-//         return tkId;
-//     }
-// }
+            if (!dto.CreationDate.HasValue)
+                dto.CreationDate = DateTime.Now;
+
+            if (dto.EndDate.HasValue)
+            {
+                if (dto.StartDate.HasValue)
+                    if (dto.StartDate > dto.EndDate)
+                        throw new InvalidOperationException("Start Date > End Date");
+
+                else
+                    throw new InvalidOperationException("End Date Has Value And Start Date Empity");
+                
+                if (dto.CreationDate.HasValue)
+                    if (dto.CreationDate > dto.EndDate)
+                        throw new InvalidOperationException("Createion Date > End Date");
+
+                if (dto.DueDate.HasValue)
+                    if (dto.DueDate > dto.EndDate)
+                        throw new InvalidOperationException("Due Date > End Date");
+            }
+
+            if (dto.DueDate.HasValue)
+                if (dto.CreationDate > dto.DueDate)
+                    throw new InvalidOperationException("Creation Date > Due Date");
+
+            if (dto.StartDate.HasValue)
+                if (dto.CreationDate > dto.StartDate)
+                    throw new InvalidOperationException("Creation Date > Start Date");
+
+            if (dto.StatusId.HasValue)
+            {
+                var statusEntity = await _context.Statuses
+                    .FirstOrDefaultAsync(p => p.StatusId == dto.StatusId)
+                    ?? throw new KeyNotFoundException("Status Not Found");
+            }
+
+            if (dto.PriorityId.HasValue)
+            {
+                var entityPriority = await _context.Priorities
+                    .FirstOrDefaultAsync(p => p.PriorityId == dto.PriorityId)
+                    ?? throw new KeyNotFoundException("Priority Not Found");
+            }
+
+            Guid taskId = Guid.NewGuid();
+            var newTask = new TaskManagement
+        {
+            TaskManagementId = taskId,
+            ProjectId = dto.ProjectId.Value,
+            StatusId = dto.StatusId,
+            PriorityId = dto.PriorityId,
+            ParentId = dto.ParentId,
+            Title = dto.Title,
+            Desc = dto.Desc,
+            CreationDate = dto.CreationDate,
+            StartDate = dto.StartDate,
+            DueDate = dto.DueDate,
+            CompletionDate = dto.EndDate
+        };
+
+            _context.TaskManagements.Add(newTask);
+
+            var logId = await _logService.Log("Create",nameof(TaskManagement), taskId);
+
+            var entry = _context.Entry(newTask);
+
+            foreach (var prop in entry.Properties)
+                await _logService.ChangLog(
+                    logId,
+                    "null",
+                    prop.CurrentValue?.ToString() ?? "null",
+                    prop.Metadata.Name
+                );
+
+            entity = newTask;
+        }
+        else
+        {
+            entity = await _context.TaskManagements
+                .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskId && !e.IsDeleted)
+                ?? throw new KeyNotFoundException("Task Not Found");
+
+            entity.StatusId = dto.StatusId;
+            entity.PriorityId = dto.PriorityId;
+            entity.ParentId = dto.ParentId;
+
+            entity.Desc = dto.Desc;
+            entity.CreationDate = dto.CreationDate;
+            entity.CompletionDate = dto.EndDate;
+
+            entity.DueDate = dto.DueDate;
+            entity.StartDate = dto.StartDate;
+
+            if (dto.ParentId.HasValue)
+            {
+                var entityTaskManagment = await _context.TaskManagements
+                    .FirstOrDefaultAsync(e => e.TaskManagementId == dto.ParentId && !e.IsDeleted)
+                    ?? throw new KeyNotFoundException("Parent Not Found");
+
+                entity.ProjectId = entityTaskManagment.ProjectId;
+                entity.ParentId = dto.ParentId;
+            }
+            else
+            {
+                if (dto.ProjectId.HasValue)
+                {
+                    var entityProject = await _context.Projects
+                        .FirstOrDefaultAsync(e => e.ProjectId == dto.ProjectId)
+                        ?? throw new KeyNotFoundException("Project Not Found");
+                    
+                    entity.ProjectId = dto.ProjectId.Value;
+                }
+                else
+                    throw new InvalidOperationException("The project cannot be empty");
+            }
+
+            if (dto.CreationDate.HasValue)
+                entity.CreationDate = dto.CreationDate;
+
+            if (dto.EndDate.HasValue)
+            {
+                if (entity.CreationDate > dto.EndDate)
+                    throw new InvalidOperationException("Createion Date > End Date");
+
+                entity.CompletionDate = dto.EndDate;
+            }
+
+            if (dto.StartDate.HasValue)
+            {
+                if (entity.CreationDate > dto.StartDate || entity.CompletionDate < dto.StartDate)
+                    throw new InvalidOperationException("Creation Date > Start Date or End Date < Start Date");
+
+                entity.StartDate = dto.StartDate;
+            }
+
+            if (dto.DueDate.HasValue)
+            {
+                if (entity.CreationDate > dto.DueDate)
+                    throw new InvalidOperationException("Creation Date > Due Date");
+
+                entity.DueDate = dto.DueDate;
+            }
+
+            if (dto.StatusId.HasValue)
+            {
+                var entityStatus = await _context.Statuses
+                    .FirstOrDefaultAsync(e => e.StatusId == dto.StatusId)
+                    ?? throw new KeyNotFoundException("Status Not Found");
+
+                entity.StatusId = dto.StatusId;
+            }
+
+            if (dto.PriorityId.HasValue)
+            {
+                var entityPriority = await _context.Priorities
+                    .FirstOrDefaultAsync(p => p.PriorityId == dto.PriorityId)
+                    ?? throw new KeyNotFoundException("Priority Not Found");
+
+                entity.PriorityId = dto.PriorityId;
+            }
+
+            if (dto.Title != null)
+            {
+                entity.Title = dto.Title;
+            }
+
+            var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
+
+            var entiry = _context.Entry(entity);
+
+            var modifiedProps = entiry.Properties
+                .Where(e => e.IsModified)
+                .Select(e => new
+                {
+                    ColumnName = e.Metadata.Name,
+                    OldVal = e.OriginalValue?.ToString() ?? "null",
+                    NewVal = e.CurrentValue?.ToString() ?? "null"
+                })
+                .ToList();
+
+            foreach (var prop in modifiedProps)
+            {
+                await _logService.ChangLog(
+                    logId,
+                    prop.OldVal,
+                    prop.NewVal,
+                    prop.ColumnName
+                );
+            }
+        }
+
+        await _context.SaveChangesAsync();
+
+        var newEntity = TaskToDto(entity);
+
+        return Ok(ApiResponse<TaskManagementDto>.Success(newEntity,$"Succeeded"));
+    }
+
+    [HttpDelete("delete/{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var entity = await _context.TaskManagements
+            .Include(r => r.Project)
+            .Include(r => r.Status)
+            .Include(r => r.Priority)
+            .Include(r => r.Parent)
+            .FirstOrDefaultAsync(e => e.TaskManagementId == id && !e.IsDeleted)
+            ?? throw new KeyNotFoundException("Task Not Found");
+
+        var exist = await _context.TaskManagements
+            .AnyAsync(r => r.ParentId == id);
+
+        if (exist)
+            throw new InvalidOperationException("This task has a sub-task");
+
+        entity.IsDeleted = true;
+
+        var logId = await _logService.Log("Delete", nameof(TaskManagement), entity.TaskManagementId);
+
+        await _logService.ChangLog(logId, "false", "true", nameof(entity.IsDeleted));
+
+        await _context.SaveChangesAsync();
+
+        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Delete Succeeded"));
+    }
+
+
+    private TaskManagementDto TaskToDto(TaskManagement taskManagement)
+    {
+        return new TaskManagementDto
+        {
+            TaskManagementId = taskManagement.TaskManagementId,
+            ProjectId = taskManagement.ProjectId,
+            StatusId = taskManagement.StatusId,
+            PriorityId = taskManagement.PriorityId,
+            ParentId = taskManagement.ParentId,
+
+            ProjectName = taskManagement.Project?.ProjectName,
+            StatusName = taskManagement.Status?.StatusName,
+            PriorityName = taskManagement.Priority?.PriorityName,
+            ParentName = taskManagement.Parent?.Title,
+
+            Title = taskManagement.Title,
+            Desc = taskManagement.Desc,
+            CreationDate = taskManagement.CreationDate,
+            StartDate = taskManagement.StartDate,
+            DueDate = taskManagement.DueDate,
+            CompletionDate = taskManagement.CompletionDate
+        };
+    }
+
+}

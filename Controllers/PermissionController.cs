@@ -139,8 +139,6 @@ public class PermissionController : ControllerBase
         return Ok(ApiResponse<PermissionDto>.Success(newEntity,$"Edit Succeeded"));
     }
 
-    
-
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {

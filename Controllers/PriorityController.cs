@@ -33,8 +33,6 @@ public class PriorityController : ControllerBase
             })
             .ToListAsync();
 
-
-
         return Ok(ApiResponse<List<PriorityDto>>.Success(entity,$"Get All Succeeded"));
     }
 
@@ -72,12 +70,11 @@ public class PriorityController : ControllerBase
         };
 
         _context.Priorities.Add(entity);
-        
-        var enrty = _context.Entry(entity);
 
         var logId = await _logService.Log("Create", nameof(Priority), entity.PriorityId);
 
         var entry = _context.Entry(entity);
+        
         foreach (var prop in entry.Properties)
         {
             await _logService.ChangLog(

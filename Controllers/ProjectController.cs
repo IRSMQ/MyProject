@@ -42,13 +42,13 @@ public class ProjectController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(projects);
+        return Ok(ApiResponse<List<ProjectDto>>.Success(projects,$"Get All Succeeded"));
     }
 
     [HttpGet("id/{id}")]
     public async Task<IActionResult> GetById(Guid id)
     {
-        var pm = await _context.Projects
+        var entity = await _context.Projects
             .AsNoTracking()
             .Where(p => p.ProjectId == id && !p.IsDeleted)
             .Select(p => new ProjectDto
@@ -68,10 +68,10 @@ public class ProjectController : ControllerBase
             })
             .FirstOrDefaultAsync();
 
-        if (pm == null)
+        if (entity == null)
             throw new KeyNotFoundException($"Project with ID {id} not found.");
 
-        return Ok(pm);
+        return Ok(ApiResponse<ProjectDto>.Success(entity,$"Get By ID Succeeded"));
     }
 
     [HttpPost("add")]
@@ -127,14 +127,13 @@ public class ProjectController : ControllerBase
 
         await _logService.Log("Delete", nameof(Project), entity.ProjectId);
 
-        return Ok(ProjectToDto(entity));
+        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Delete Succeeded"));
     }
-
 
     [HttpPut("edit")]
     public async Task<IActionResult> Edit([FromBody] ProjectEditDto projectEditDto)
     {
-        var pr = await _context.Projects
+        var entity = await _context.Projects
             .Include(p => p.Status)
             .Include(p => p.Priority)
             .Include(p => p.Manager)
@@ -151,7 +150,7 @@ public class ProjectController : ControllerBase
             if (u.RoleId != Guid.Parse("6869DEFE-56C3-490A-BAB2-0EA92EC97BCA"))
                 throw new InvalidOperationException("The role must be Manager");
 
-            pr.ManagerId = projectEditDto.ManagerId.Value;
+            entity.ManagerId = projectEditDto.ManagerId.Value;
         }
 
         if (projectEditDto.PriorityId.HasValue)
@@ -160,23 +159,23 @@ public class ProjectController : ControllerBase
                 .FindAsync(projectEditDto.PriorityId)
                 ?? throw new KeyNotFoundException("Priority Not Found");
 
-            pr.PriorityId = projectEditDto.PriorityId;
+            entity.PriorityId = projectEditDto.PriorityId;
         }
 
         if (!string.IsNullOrWhiteSpace(projectEditDto.Title))
         {
             var exists = await _context.Projects
-                .AnyAsync(r => r.ProjectName == projectEditDto.Title && r.ProjectId != pr.ProjectId && !r.IsDeleted);
+                .AnyAsync(r => r.ProjectName == projectEditDto.Title && r.ProjectId != entity.ProjectId && !r.IsDeleted);
 
             if (exists)
                 throw new InvalidOperationException("Project Name Exist");
 
-            pr.ProjectName = projectEditDto.Title;
+            entity.ProjectName = projectEditDto.Title;
         }
 
-        pr.Desc = projectEditDto.Description ?? pr.Desc;
+        entity.Desc = projectEditDto.Description ?? entity.Desc;
 
-        var entry = _context.Entry(pr);
+        var entry = _context.Entry(entity);
 
         var modifiedProps = entry.Properties
             .Where(p => p.IsModified)
@@ -196,15 +195,14 @@ public class ProjectController : ControllerBase
                 .FindEntityType(typeof(Project))?
                 .GetTableName() ?? nameof(Project);
 
-            var logId = await _logService.Log("Edit", tableName, pr.ProjectId);
+            var logId = await _logService.Log("Edit", tableName, entity.ProjectId);
 
             foreach (var change in modifiedProps)
                 await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
         }
 
-        return Ok(ProjectToDto(pr));
+        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Edit Succeeded"));
     }
-
 
     [HttpPut("edit/date")]
     public async Task<IActionResult> EditDate([FromBody] EditAllDate editAllDate)
@@ -290,7 +288,7 @@ public class ProjectController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ProjectToDto(entity));
+        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Edit Date Succeeded"));
     }
 
 

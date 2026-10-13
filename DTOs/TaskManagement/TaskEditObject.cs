@@ -7,5 +7,5 @@ namespace Test26.DTOs;
 public partial class TaskEditObject
 {
     public Guid TaskID { get; set; }
-    public Guid ObjectId { get; set; }
+    public Guid? ObjectId { get; set; }
 }

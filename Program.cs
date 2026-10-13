@@ -70,9 +70,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddScoped<TokenService>();
-builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<PasswordHassherHandler>();
-builder.Services.AddScoped<TaskManagementService>();
 builder.Services.AddScoped<LogService>();
 
 var app = builder.Build();

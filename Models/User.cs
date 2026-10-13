@@ -30,4 +30,6 @@ public partial class User
     public virtual ICollection<Project> Projects { get; set; } = new List<Project>();
 
     public virtual Role? Role { get; set; }
+
+    public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
 }

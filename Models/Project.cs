@@ -17,7 +17,7 @@ public partial class Project
 
     public string? Desc { get; set; }
 
-    public DateTime CreationDate { get; set; }
+    public DateTime? CreationDate { get; set; }
 
     public DateTime? StartDate { get; set; }
 

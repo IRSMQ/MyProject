@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Test26.Models;
-
 namespace Test26.Context;
 
 public partial class ProjectManagementSystemContext : DbContext
@@ -115,9 +114,7 @@ public partial class ProjectManagementSystemContext : DbContext
             entity.Property(e => e.ProjectId)
                 .HasDefaultValueSql("(newid())", "DF_Project_ProjectId")
                 .HasColumnName("ProjectID");
-            entity.Property(e => e.CreationDate)
-                .HasDefaultValueSql("(getdate())", "DF_Project_CreationDate")
-                .HasColumnType("datetime");
+            entity.Property(e => e.CreationDate).HasColumnType("datetime");
             entity.Property(e => e.Desc).HasMaxLength(500);
             entity.Property(e => e.DueDate).HasColumnType("datetime");
             entity.Property(e => e.EndDate)
@@ -128,9 +125,7 @@ public partial class ProjectManagementSystemContext : DbContext
             entity.Property(e => e.ProjectName)
                 .HasMaxLength(50)
                 .HasDefaultValue("Test", "DF_Project_ProjectName");
-            entity.Property(e => e.StartDate)
-                .HasDefaultValueSql("(getdate())", "DF_Project_StartDate")
-                .HasColumnType("datetime");
+            entity.Property(e => e.StartDate).HasColumnType("datetime");
             entity.Property(e => e.StatusId).HasColumnName("StatusID");
 
             entity.HasOne(d => d.Manager).WithMany(p => p.Projects)
@@ -281,25 +276,23 @@ public partial class ProjectManagementSystemContext : DbContext
 
         modelBuilder.Entity<UserPermission>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("UserPermission");
+            entity.ToTable("UserPermission");
 
+            entity.Property(e => e.UserPermissionId)
+                .HasDefaultValueSql("(newid())", "DF_UserPermission_UserPermissionID")
+                .HasColumnName("UserPermissionID");
             entity.Property(e => e.Bit)
                 .HasDefaultValue(true, "DF_UserPermission_bit")
                 .HasColumnName("bit");
             entity.Property(e => e.PermissionId).HasColumnName("PermissionID");
             entity.Property(e => e.UserId).HasColumnName("UserID");
-            entity.Property(e => e.UserPermissionId)
-                .HasDefaultValueSql("(newid())", "DF_UserPermission_UserPermissionID")
-                .HasColumnName("UserPermissionID");
 
-            entity.HasOne(d => d.Permission).WithMany()
+            entity.HasOne(d => d.Permission).WithMany(p => p.UserPermissions)
                 .HasForeignKey(d => d.PermissionId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserPermission_Permission");
 
-            entity.HasOne(d => d.User).WithMany()
+            entity.HasOne(d => d.User).WithMany(p => p.UserPermissions)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserPermission_User");

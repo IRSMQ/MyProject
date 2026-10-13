@@ -4,7 +4,7 @@ using Test26.Models;
 
 namespace Test26.DTOs;
 
-public partial class TMADto
+public partial class TMDtoAdd
 {
     public Guid? TaskId { get; set; }
     public Guid? ProjectId { get; set; }
@@ -15,7 +15,7 @@ public partial class TMADto
 
     public Guid? ParentId { get; set; }
 
-    public string Title { get; set; } = null!;
+    public string? Title { get; set; }
 
     public string? Desc { get; set; }
 
