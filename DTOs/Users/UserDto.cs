@@ -13,6 +13,6 @@ public class UserDto
     public string Username { get; set; } = null!;
     public string? Email { get; set; }
     public string? Phone { get; set; }
-    public bool Status { get; set; } = true;
+    public bool? Status { get; set; }
     public string? RoleName { get; set; }
 }

@@ -460,12 +460,17 @@ public class TaskManagementController : ControllerBase
             var entry = _context.Entry(newTask);
 
             foreach (var prop in entry.Properties)
-                await _logService.ChangLog(
-                    logId,
-                    "null",
-                    prop.CurrentValue?.ToString() ?? "null",
-                    prop.Metadata.Name
-                );
+            {
+                if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
+                {
+                    await _logService.ChangLog(
+                        logId,
+                        "null",
+                        prop.CurrentValue?.ToString() ?? "null",
+                        prop.Metadata.Name
+                    );
+                }
+            }
 
             entity = newTask;
         }
@@ -488,11 +493,11 @@ public class TaskManagementController : ControllerBase
 
             if (dto.ParentId.HasValue)
             {
-                var entityTaskManagment = await _context.TaskManagements
+                var entityTaskManagement = await _context.TaskManagements
                     .FirstOrDefaultAsync(e => e.TaskManagementId == dto.ParentId && !e.IsDeleted)
                     ?? throw new KeyNotFoundException("Parent Not Found");
 
-                entity.ProjectId = entityTaskManagment.ProjectId;
+                entity.ProjectId = entityTaskManagement.ProjectId;
                 entity.ParentId = dto.ParentId;
             }
             else
@@ -611,8 +616,6 @@ public class TaskManagementController : ControllerBase
         entity.IsDeleted = true;
 
         var logId = await _logService.Log("Delete", nameof(TaskManagement), entity.TaskManagementId);
-
-        await _logService.ChangLog(logId, "false", "true", nameof(entity.IsDeleted));
 
         await _context.SaveChangesAsync();
 

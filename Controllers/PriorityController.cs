@@ -77,12 +77,15 @@ public class PriorityController : ControllerBase
         
         foreach (var prop in entry.Properties)
         {
-            await _logService.ChangLog(
-                logId,
-                oldValue: "null",
-                newValue: prop.CurrentValue?.ToString() ?? "null",
-                columnName: prop.Metadata.Name
-            );
+            if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
+            {
+                await _logService.ChangLog(
+                    logId,
+                    oldValue: "null",
+                    newValue: prop.CurrentValue?.ToString() ?? "null",
+                    columnName: prop.Metadata.Name
+                );
+            }
         }
 
         await _context.SaveChangesAsync();
@@ -131,14 +134,47 @@ public class PriorityController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var entity = await _context.Priorities
-            .FirstOrDefaultAsync(p => p.PriorityId == id && !p.IsDeleted)
-            ?? throw new KeyNotFoundException($"Priority with ID {id} not found.");
+            .FirstOrDefaultAsync(e => e.PriorityId == id && !e.IsDeleted)
+            ?? throw new KeyNotFoundException($"Priority Not Found");
 
         entity.IsDeleted = true;
 
-        var logId = await _logService.Log("Delete", nameof(Priority), entity.PriorityId);
+        await _logService.Log("Delete", nameof(Priority), entity.PriorityId);
 
-        await _logService.ChangLog(logId, "false", "true", nameof(entity.IsDeleted));
+        var entityProject = await _context.Projects
+            .Where(e => e.PriorityId == id && !e.IsDeleted)
+            .ToListAsync();
+
+        foreach (var e in entityProject)
+        {
+            var logId = await _logService.Log("Edit", nameof(Project), e.ProjectId);
+
+            await _logService.ChangLog(
+                logId,
+                e.PriorityId?.ToString() ?? "null",
+                "null",
+                nameof(e.Priority)
+            );
+            
+            e.Priority = null;
+        }
+
+        var entityTaskManagement = await _context.TaskManagements
+            .Where(e => e.PriorityId == id && !e.IsDeleted)
+            .ToListAsync();
+
+        foreach (var e in entityTaskManagement)
+        {
+            var logId = await _logService.Log("Edit", nameof(TaskManagement), e.TaskManagementId);
+            await _logService.ChangLog(
+                logId,
+                e.PriorityId?.ToString() ?? "null",
+                "null",
+                nameof(e.PriorityId)
+            );
+
+            e.PriorityId = null;
+        }
 
         await _context.SaveChangesAsync();
 

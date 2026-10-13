@@ -26,12 +26,14 @@ public class RolePermissionController : ControllerBase
     {
         var entity = await _context.RolePermissions
             .AsNoTracking()
-            .Select(r => new RPDto
+            .Where(e => e.IsDeleted == false)
+            .Select(e => new RPDto
             {
-                RoleID = r.RoleId,
-                PermissionID = r.PermissionId,
-                RoleName = r.Role.RoleName,
-                PermissionName = r.Permission.PermissionName
+                Rpid = e.Rpid,
+                RoleID = e.RoleId,
+                PermissionID = e.PermissionId,
+                RoleName = e.Role.RoleName,
+                PermissionName = e.Permission.PermissionName
             })
             .ToListAsync();
 
@@ -47,13 +49,14 @@ public class RolePermissionController : ControllerBase
     {
         var entity = await _context.RolePermissions
             .AsNoTracking()
-            .Where(r => r.RoleId == id)
-            .Select(r => new RPDto
+            .Where(e => e.RoleId == id && e.IsDeleted == false)
+            .Select(e => new RPDto
             {
-                RoleID = r.RoleId,
-                PermissionID = r.PermissionId,
-                RoleName = r.Role.RoleName,
-                PermissionName = r.Permission.PermissionName
+                Rpid = e.Rpid,
+                RoleID = e.RoleId,
+                PermissionID = e.PermissionId,
+                RoleName = e.Role.RoleName,
+                PermissionName = e.Permission.PermissionName
             })
             .ToListAsync();
 
@@ -69,18 +72,19 @@ public class RolePermissionController : ControllerBase
     {
         var entity = await _context.RolePermissions
             .AsNoTracking()
-            .Where(r => r.PermissionId == id)
-            .Select(r => new RPDto
+            .Where(e => e.PermissionId == id && e.IsDeleted == false)
+            .Select(e => new RPDto
             {
-                RoleID = r.RoleId,
-                PermissionID = r.PermissionId,
-                RoleName = r.Role.RoleName,
-                PermissionName = r.Permission.PermissionName
+                Rpid = e.Rpid,
+                RoleID = e.RoleId,
+                PermissionID = e.PermissionId,
+                RoleName = e.Role.RoleName,
+                PermissionName = e.Permission.PermissionName
             })
             .ToListAsync();
 
         if (entity.Count == 0)
-            throw new KeyNotFoundException($"RolePermission With ID: {id} Not Exist");
+            throw new KeyNotFoundException($"RolePermission Not Exist");
 
         return Ok(ApiResponse<List<RPDto>>.Success(entity,$"Succeeded"));
     }
@@ -92,17 +96,17 @@ public class RolePermissionController : ControllerBase
 
         if (dto.RPID.HasValue)
         {
-            var RoleEntity = await _context.Roles.FindAsync(dto.RoleID);
-            var PermissionEntity = await _context.Permissions.FindAsync(dto.PermissionID);
-
-            if (RoleEntity == null || PermissionEntity == null)
-                throw new KeyNotFoundException("Role ID or Permission ID NULL");
-
             var entity = await _context.RolePermissions
-                .FirstOrDefaultAsync(x => x.RoleId == dto.RoleID && x.PermissionId == dto.PermissionID);
+                .FirstOrDefaultAsync(e => e.RoleId == dto.RoleID && e.PermissionId == dto.PermissionID && e.IsDeleted == false)
+                ?? throw new KeyNotFoundException($"This permission not available for this Role");
 
-            if (entity == null)
-                throw new InvalidOperationException($"This permission not available for this Role: {RoleEntity.RoleName} Permission: {PermissionEntity.PermissionName}");    
+            var entityRole = await _context.Roles
+                .FindAsync(dto.RoleID)
+                ?? throw new KeyNotFoundException("Role Not Found");
+
+            var entityPermission = await _context.Permissions
+                .FindAsync(dto.PermissionID)
+                ?? throw new KeyNotFoundException("Permission Not Found");
 
             entity.RoleId = dto.RoleID;
             entity.PermissionId = dto.PermissionID;
@@ -112,37 +116,44 @@ public class RolePermissionController : ControllerBase
             var entry = _context.Entry(entity);
 
             var modifiedProps = entry.Properties
-                .Where(p => p.IsModified)
-                .Select(p => new
+                .Where(e => e.IsModified)
+                .Select(e => new
                 {
-                    ColumnName = p.Metadata.Name,
-                    OldValue = p.OriginalValue?.ToString() ?? "null",
-                    NewValue = p.CurrentValue?.ToString() ?? "null"
+                    ColumnName = e.Metadata.Name,
+                    OldValue = e.OriginalValue?.ToString() ?? "null",
+                    NewValue = e.CurrentValue?.ToString() ?? "null"
                 })
                 .ToList();
 
             foreach (var prop in modifiedProps)
             {
-                await _logService.ChangLog(logId, prop.OldValue, prop.NewValue, prop.ColumnName);
+                await _logService.ChangLog(
+                    logId,
+                    prop.OldValue,
+                    prop.NewValue,
+                    prop.ColumnName
+                );
             }
 
-            result.Rpid = entity.Rpid;
             result.RoleID = dto.RoleID;
             result.PermissionID = dto.PermissionID;
-            result.RoleName = RoleEntity.RoleName;
-            result.PermissionName = PermissionEntity.PermissionName;
+            result.RoleName = entityRole.RoleName;
+            result.PermissionName = entityPermission.PermissionName;
 
         }
         else
         {
-            var RoleEntity = await _context.Roles.FindAsync(dto.RoleID);
-            var PermissionEntity = await _context.Permissions.FindAsync(dto.PermissionID);
+            var RoleEntity = await _context.Roles
+                .FindAsync(dto.RoleID);
+            
+            var PermissionEntity = await _context.Permissions
+                .FindAsync(dto.PermissionID);
 
             if (RoleEntity == null || PermissionEntity == null)
-                throw new KeyNotFoundException("Role ID or Permission ID NULL");
+                throw new KeyNotFoundException("Role ID or Permission ID is NULL");
 
             var exists = await _context.RolePermissions
-                .AnyAsync(x => x.RoleId == dto.RoleID && x.PermissionId == dto.PermissionID);
+                .AnyAsync(e => e.RoleId == dto.RoleID && e.PermissionId == dto.PermissionID && e.IsDeleted == false);
 
             if (exists)
                 throw new InvalidOperationException($"This permission is available for this Role: {RoleEntity.RoleName} Permission: {PermissionEntity.PermissionName}");
@@ -162,12 +173,15 @@ public class RolePermissionController : ControllerBase
 
             foreach(var prop in entry.Properties)
             {
-                await _logService.ChangLog(
-                    logId,
-                    "null",
-                    prop.CurrentValue?.ToString() ?? "null",
-                    prop.Metadata.Name
-                );
+                if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
+                {
+                    await _logService.ChangLog(
+                        logId,
+                        "null",
+                        prop.CurrentValue?.ToString() ?? "null",
+                        prop.Metadata.Name
+                    );
+                }
             }
 
             result.Rpid = newRp.Rpid;
@@ -178,6 +192,7 @@ public class RolePermissionController : ControllerBase
         }
         
         await _context.SaveChangesAsync();
+
         return Ok(ApiResponse<RPDto>.Success(result,$"Succeded"));
     }
 
@@ -185,13 +200,15 @@ public class RolePermissionController : ControllerBase
     [HttpDelete("delete")]
     public async Task<IActionResult> Delete([FromBody] RPDtoDelete dto)
     {
-        Test26.Models.RolePermission entity;
+        Guid relatedId;
+        RolePermission entity;
         if (dto.Rpid.HasValue)
         {
             entity = await _context.RolePermissions.FindAsync(dto.Rpid)
                 ?? throw new KeyNotFoundException("Role Permission Not Found");
 
             entity.IsDeleted = true;
+            relatedId = dto.Rpid.Value;
         }
         else if (dto.RoleID.HasValue && dto.PermissionID.HasValue)
         {
@@ -200,14 +217,13 @@ public class RolePermissionController : ControllerBase
                 ?? throw new KeyNotFoundException("RoleID or PermissionID Not Exist");
 
             entity.IsDeleted = true;
+            relatedId = entity.Rpid;
         }
         else throw new KeyNotFoundException("RoleID || PermissionID || RPID = null");
 
-        var logId = await _logService.Log("Delete", nameof(RolePermission), dto.Rpid.Value);
-        await _logService.ChangLog(logId,"false","true",nameof(entity.IsDeleted));
+        await _logService.Log("Delete", nameof(RolePermission), relatedId);
         
-        await _context.SaveChangesAsync();
-
+        
         var result = new RPDto
         {
             Rpid = entity.Rpid,
@@ -216,6 +232,8 @@ public class RolePermissionController : ControllerBase
             RoleName = entity.Role.RoleName,
             PermissionName = entity.Permission.PermissionName
         };
+
+        await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<RPDto>.Success(result,$"Delete Succeeded"));
     }

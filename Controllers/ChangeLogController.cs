@@ -25,19 +25,21 @@ public class ChangeLogController : ControllerBase
     public async Task<IActionResult> GetNTop(int n)
     {
         var entity = await _context.ChangeLogs
-            .Where(c => !((ISoftDeletable)c).IsDeleted)
+            .AsNoTracking()
+            .Where(e => !e.IsDeleted)
             .Take(n)
             .ToListAsync()
             ?? throw new InvalidOperationException("Change Log Empity");
 
-        return Ok(entity);
+        return Ok(ApiResponse<List<ChangeLog>>.Success(entity,$"Get N Top Succeeded"));
     }
 
     [HttpGet("logid/{id}")]
     public async Task<IActionResult> GetByLogId(Guid id)
     {
         var entity = await _context.ChangeLogs
-            .Where(c => !((ISoftDeletable)c).IsDeleted && c.LogId == id)
+            .AsNoTracking()
+            .Where(e => !e.IsDeleted && e.LogId == id)
             .ToListAsync();
 
         if (entity.Count == 0)
@@ -50,7 +52,8 @@ public class ChangeLogController : ControllerBase
     public async Task<IActionResult> GetById(Guid id)
     {
         var entity = await _context.ChangeLogs
-            .FirstOrDefaultAsync(c => c.ChangeLogId == id && !((ISoftDeletable)c).IsDeleted)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.ChangeLogId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("There are no Change Log with this ID");
 
         return Ok(ApiResponse<ChangeLog>.Success(entity,$"Get By ID Succeeded"));
@@ -65,8 +68,7 @@ public class ChangeLogController : ControllerBase
 
         entity.IsDeleted = true;
 
-        var logId = await _logService.Log("Delete", nameof(ChangeLog), id);
-        await _logService.ChangLog(logId, "false", "true", nameof(entity.IsDeleted));
+        await _logService.Log("Delete", nameof(ChangeLog), id);
         
         await _context.SaveChangesAsync();
 

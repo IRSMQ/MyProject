@@ -76,12 +76,12 @@ public class RoleController : ControllerBase
             var entry = _context.Entry(entity);
 
             var modifiedProperties = entry.Properties
-                .Where(p => p.IsModified)
-                .Select(p => new
+                .Where(e => e.IsModified)
+                .Select(e => new
                 {
-                    CulomnName = p.Metadata.Name,
-                    OldValue = p.OriginalValue?.ToString() ?? "null",
-                    NewValue = p.CurrentValue?.ToString() ?? "null"
+                    CulomnName = e.Metadata.Name,
+                    OldValue = e.OriginalValue?.ToString() ?? "null",
+                    NewValue = e.CurrentValue?.ToString() ?? "null"
                 })
                 .ToList();
 
@@ -113,11 +113,22 @@ public class RoleController : ControllerBase
             var entry = _context.Entry(newEntity);
 
             foreach (var prop in entry.Properties)
-                await _logService.ChangLog(logId, "null", prop.CurrentValue?.ToString() ?? "null", prop.Metadata.Name);
-        
+            {
+                if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
+                {
+                    await _logService.ChangLog(
+                        logId,
+                        "null",
+                        prop.CurrentValue?.ToString() ?? "null",
+                        prop.Metadata.Name
+                    );
+                }
+            }
             role.RoleId = newEntity.RoleId;
             role.RoleName = newEntity.RoleName;
         }
+
+        await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<RoleDto>.Success(role,$"Succeeded"));
     }
@@ -126,36 +137,45 @@ public class RoleController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var entity = await _context.Roles
-            .FirstOrDefaultAsync(p => p.RoleId == id && !p.IsDeleted);
+            .FirstOrDefaultAsync(e => e.RoleId == id && !e.IsDeleted)
+            ?? throw new KeyNotFoundException($"Role with ID {id} not found.");
 
-        if (entity == null)
-            throw new KeyNotFoundException($"Role with ID {id} not found.");
+        
 
-        entity.IsDeleted = true;
-
-        var userEntity = await _context.Users
-            .Where(p => p.RoleId == id)
+        var entityUser = await _context.Users
+            .Where(e => e.RoleId == id && !e.IsDeleted)
             .ToListAsync();
 
-        foreach (var u in userEntity)
+        foreach (var u in entityUser)
+        {
             u.RoleId = null;
 
-        var roleLogId = await _logService.Log("Delete", nameof(Role), entity.RoleId);
-        await _logService.ChangLog(roleLogId, "False", "True", nameof(entity.IsDeleted));
-
-        foreach (var u in userEntity)
-        {
             var userLogId = await _logService.Log("Edit", nameof(User), u.UserId);
+
             await _logService.ChangLog(userLogId, id.ToString(), "null", nameof(u.RoleId));
         }
 
-        await _context.SaveChangesAsync();
+        var entityRolePermission = await _context.RolePermissions
+            .Where(e => e.RoleId == id && !e.IsDeleted)
+            .ToListAsync();
+
+        foreach (var e in entityRolePermission)
+        {
+            e.IsDeleted = true;
+            var userLogId = await _logService.Log("Delete", nameof(RolePermission), e.Rpid);
+        }
+
+        entity.IsDeleted = true;
+
+        await _logService.Log("Delete", nameof(Role), entity.RoleId);
 
         var newRole = new RoleDto
         {
             RoleId = entity.RoleId,
             RoleName = entity.RoleName
         };
+
+        await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<RoleDto>.Success(newRole,$""));
     }

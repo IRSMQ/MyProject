@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Test26.ApiR;
 using Test26.Context;
 using Test26.DTOs;
 using Test26.Models;
@@ -23,17 +24,17 @@ public class StatusController : ControllerBase
     [HttpGet("all")]
     public async Task<ActionResult<List<StatusDto>>> GetAll()
     {
-        var result = await _context.Statuses
+        var entity = await _context.Statuses
             .AsNoTracking()
-            .Where(p => !p.IsDeleted)
-            .Select(p => new StatusDto
+            .Where(e => !e.IsDeleted)
+            .Select(e => new StatusDto
             {
-                StatusId = p.StatusId,
-                StatusName = p.StatusName,
+                StatusId = e.StatusId,
+                StatusName = e.StatusName,
             })
             .ToListAsync();
 
-        return Ok(result);
+        return Ok(entity);
     }
 
     [HttpGet("byid/{id:guid}")]
@@ -41,18 +42,16 @@ public class StatusController : ControllerBase
     {
         var entity = await _context.Statuses
             .AsNoTracking()
-            .Where(p => p.StatusId == id && !p.IsDeleted)
-            .Select(p => new StatusDto
+            .Where(e => e.StatusId == id && !e.IsDeleted)
+            .Select(e => new StatusDto
             {
-                StatusId = p.StatusId,
-                StatusName = p.StatusName
+                StatusId = e.StatusId,
+                StatusName = e.StatusName
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"Status Not Found");
 
-        if (entity == null)
-            throw new KeyNotFoundException($"Status with ID {id} not found.");
-
-        return Ok(entity);
+        return Ok(ApiResponse<StatusDto>.Success(entity, $"Get By ID Succeeded"));
     }
 
     [HttpPost("add")]
@@ -64,95 +63,98 @@ public class StatusController : ControllerBase
         if (exists)
             throw new InvalidOperationException("Status already exists.");
 
-        var entity = new Status
+        var newStatus = new StatusDto();
+        string text;
+
+        if (dto.StatusId.HasValue)
         {
-            StatusId = Guid.NewGuid(),
-            StatusName = dto.StatusName,
-            IsDeleted = false
-        };
+            var entity = await _context.Statuses
+                .FirstOrDefaultAsync(p => p.StatusId == dto.StatusId && !p.IsDeleted)
+                ?? throw new KeyNotFoundException($"Status Not Found");
 
-        _context.Statuses.Add(entity);
-        await _context.SaveChangesAsync();
-
-        var logId = await _logService.Log("Create", nameof(Status), entity.StatusId);
-
-        var entry = _context.Entry(entity);
-        foreach (var prop in entry.Properties)
-        {
-            await _logService.ChangLog(
-                logId,
-                oldValue: "null",
-                newValue: prop.CurrentValue?.ToString() ?? "null",
-                columnName: prop.Metadata.Name
-            );
-        }
-
-        return Ok(new StatusDto
-        {
-            StatusId = entity.StatusId,
-            StatusName = entity.StatusName
-        });
-    }
-
-    [HttpPut("edit")]
-    public async Task<ActionResult<StatusDto>> Edit([FromBody] StatusDto dto)
-    {
-        var entity = await _context.Statuses
-            .FirstOrDefaultAsync(p => p.StatusId == dto.StatusId && !p.IsDeleted);
-
-        if (entity == null)
-            throw new KeyNotFoundException($"Status with ID {dto.StatusId} not found.");
-
-        entity.StatusName = dto.StatusName;
-
-        var entry = _context.Entry(entity);
-        var modifiedProperties = entry.Properties
-            .Where(p => p.IsModified)
-            .Select(p => new
+            if (entity.StatusName == dto.StatusName)
             {
-                ColumnName = p.Metadata.Name,
-                OldValue = p.OriginalValue?.ToString() ?? "null",
-                NewValue = p.CurrentValue?.ToString() ?? "null"
-            })
-            .ToList();
+                newStatus.StatusId = entity.StatusId;
+                newStatus.StatusName = entity.StatusName;
 
-        await _context.SaveChangesAsync();
+                return Ok(ApiResponse<StatusDto>.Success(newStatus,$"Status Exist"));
+            }
 
-        if (modifiedProperties.Any())
-        {
+            var entry = _context.Entry(entity);
+
             var logId = await _logService.Log("Edit", nameof(Status), entity.StatusId);
 
-            foreach (var prop in modifiedProperties)
-            {
-                await _logService.ChangLog(logId, prop.OldValue, prop.NewValue, prop.ColumnName);
-            }
-        }
+            await _logService.ChangLog(
+                logId,
+                entity.StatusName,
+                dto.StatusName,
+                nameof(entity.StatusName)
+            );
 
-        return Ok(new StatusDto
+            entity.StatusName = dto.StatusName;
+            text = "Edit Succeeded";
+
+            newStatus.StatusId = entity.StatusId;
+            newStatus.StatusName = entity.StatusName;
+        }
+        else
         {
-            StatusId = entity.StatusId,
-            StatusName = entity.StatusName
-        });
+            var entity = new Status
+            {
+                StatusId = Guid.NewGuid(),
+                StatusName = dto.StatusName,
+                IsDeleted = false
+            };
+
+            _context.Statuses.Add(entity);
+            
+            var logId = await _logService.Log("Create", nameof(Status), entity.StatusId);
+
+            var entry = _context.Entry(entity);
+            foreach (var prop in entry.Properties)
+            {
+                if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
+                {
+                    await _logService.ChangLog(
+                        logId,
+                        "null",
+                        prop.CurrentValue?.ToString() ?? "null",
+                        prop.Metadata.Name
+                    );
+                }
+            }
+
+            text = "Add Succeeded";
+
+            newStatus.StatusId = entity.StatusId;
+            newStatus.StatusName = entity.StatusName;
+        }
+        
+
+        await _context.SaveChangesAsync();
+
+        return Ok(ApiResponse<StatusDto>.Success(newStatus, $"{text}"));
     }
 
     [HttpDelete("delete/{id:guid}")]
     public async Task<ActionResult<StatusDto>> Delete(Guid id)
     {
         var entity = await _context.Statuses
-            .FirstOrDefaultAsync(p => p.StatusId == id && !p.IsDeleted);
-
-        if (entity == null)
-            throw new KeyNotFoundException($"Status with ID {id} not found.");
+            .FirstOrDefaultAsync(e => e.StatusId == id && !e.IsDeleted)
+            ?? throw new KeyNotFoundException($"Status with ID {id} not found.");
 
         entity.IsDeleted = true;
-        await _context.SaveChangesAsync();
-
+    
         await _logService.Log("Delete", nameof(Status), entity.StatusId);
 
-        return Ok(new StatusDto
+        await _context.SaveChangesAsync();
+
+        var newStatus = new StatusDto
         {
             StatusId = entity.StatusId,
             StatusName = entity.StatusName
-        });
+        };
+
+        return Ok(ApiResponse<StatusDto>.Success(newStatus,$"Delete Succeeded"));
     }
 }

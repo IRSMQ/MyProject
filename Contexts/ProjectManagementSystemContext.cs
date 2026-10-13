@@ -265,6 +265,7 @@ public partial class ProjectManagementSystemContext : DbContext
             entity.Property(e => e.UserPhone)
                 .HasMaxLength(11)
                 .IsUnicode(false);
+            entity.Property(e => e.UserStatus).HasDefaultValue(false, "DF_User_UserStatus");
             entity.Property(e => e.Username)
                 .HasMaxLength(20)
                 .IsUnicode(false);

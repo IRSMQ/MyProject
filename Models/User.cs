@@ -19,9 +19,9 @@ public partial class User
 
     public string? UserPhone { get; set; }
 
-    public DateTime CreationDate { get; set; }
+    public DateTime? CreationDate { get; set; }
 
-    public bool UserStatus { get; set; }
+    public bool? UserStatus { get; set; }
 
     public bool IsDeleted { get; set; }
 
