@@ -2,6 +2,7 @@ namespace Test26.DTOs;
 
 public class CreateProject
 {
+    public Guid? ProjectId { get; set; }
     public Guid? StatusId { get; set; }
     public Guid? ManagerId { get; set; }
     public Guid? PriorityId { get; set; }

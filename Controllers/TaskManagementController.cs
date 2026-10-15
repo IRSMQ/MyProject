@@ -7,7 +7,7 @@ using Test26.DTOs;
 using Test26.Models;
 using Test26.Service;
 
-namespace Test26.Controllers;
+namespace Test26.Controller;
 
 [ApiController]
 [Route("api/[controller]")]

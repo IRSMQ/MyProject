@@ -25,11 +25,11 @@ public class PriorityController : ControllerBase
     {
         var entity = await _context.Priorities
             .AsNoTracking()
-            .Where(p => !p.IsDeleted)
-            .Select(p => new PriorityDto
+            .Where(e => !e.IsDeleted)
+            .Select(e => new PriorityDto
             {
-                PriorityId = p.PriorityId,
-                PriorityName = p.PriorityName,
+                PriorityId = e.PriorityId,
+                PriorityName = e.PriorityName,
             })
             .ToListAsync();
 
@@ -41,11 +41,11 @@ public class PriorityController : ControllerBase
     {
         var entity = await _context.Priorities
             .AsNoTracking()
-            .Where(p => p.PriorityId == id && !p.IsDeleted)
-            .Select(p => new PriorityDto
+            .Where(e => e.PriorityId == id && !e.IsDeleted)
+            .Select(e => new PriorityDto
             {
-                PriorityId = p.PriorityId,
-                PriorityName = p.PriorityName
+                PriorityId = e.PriorityId,
+                PriorityName = e.PriorityName
             })
             .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Priority with ID {id} not found.");
@@ -57,77 +57,54 @@ public class PriorityController : ControllerBase
     public async Task<IActionResult> Add([FromBody] PriorityAddDto dto)
     {
         var exists = await _context.Priorities
-            .AnyAsync(p => p.PriorityName == dto.PriorityName && !p.IsDeleted);
+            .AnyAsync(e => e.PriorityName == dto.PriorityName && !e.IsDeleted);
 
         if (exists)
             throw new InvalidOperationException("Priority already exists.");
 
-        var entity = new Priority
+        Priority entity;
+
+        if (dto.PriorityId.HasValue)
         {
-            PriorityId = Guid.NewGuid(),
-            PriorityName = dto.PriorityName,
-            IsDeleted = false
-        };
+            entity = await _context.Priorities
+                .FirstOrDefaultAsync(e => e.PriorityId == dto.PriorityId && !e.IsDeleted)
+                ?? throw new KeyNotFoundException("Priority Not Found");
 
-        _context.Priorities.Add(entity);
+            var logId = await _logService.Log("Edit", nameof(Priority), entity.PriorityId);
 
-        var logId = await _logService.Log("Create", nameof(Priority), entity.PriorityId);
+            await _logService.ChangLog(
+                logId,
+                entity.PriorityName.ToString(),
+                dto.PriorityName.ToString(),
+                nameof(entity.PriorityName)
+            );
 
-        var entry = _context.Entry(entity);
-        
-        foreach (var prop in entry.Properties)
+            entity.PriorityName = dto.PriorityName;
+        }
+        else
         {
-            if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
+            entity = new Priority
             {
-                await _logService.ChangLog(
-                    logId,
-                    oldValue: "null",
-                    newValue: prop.CurrentValue?.ToString() ?? "null",
-                    columnName: prop.Metadata.Name
-                );
-            }
+                PriorityId = Guid.NewGuid(),
+                PriorityName = dto.PriorityName,
+                IsDeleted = false
+            };
+
+            _context.Priorities.Add(entity);
+
+            var logId = await _logService.Log("Create", nameof(Priority), entity.PriorityId);
+
+            await _logService.ChangLog(
+                logId,
+                "null",
+                dto.PriorityName,
+                nameof(entity.PriorityName)
+            );
         }
 
         await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<PriorityDto>.Success(PriorityToDto(entity),$"Add Succeeded"));
-    }
-
-    [HttpPut("edit")]
-    public async Task<IActionResult> Edit([FromBody] PriorityDto dto)
-    {
-        var entity = await _context.Priorities
-            .FirstOrDefaultAsync(p => p.PriorityId == dto.PriorityId && !p.IsDeleted);
-
-        if (entity == null)
-            throw new KeyNotFoundException($"Priority with ID {dto.PriorityId} not found.");
-
-        entity.PriorityName = dto.PriorityName;
-
-        var entry = _context.Entry(entity);
-
-        var modifiedProperties = entry.Properties
-            .Where(p => p.IsModified)
-            .Select(p => new
-            {
-                ColumnName = p.Metadata.Name,
-                OldValue = p.OriginalValue?.ToString() ?? "null",
-                NewValue = p.CurrentValue?.ToString() ?? "null"
-            })
-            .ToList();
-        
-
-        if (modifiedProperties.Any())
-        {
-            var logId = await _logService.Log("Edit", nameof(Priority), entity.PriorityId);
-
-            foreach (var prop in modifiedProperties)
-                await _logService.ChangLog(logId, prop.OldValue, prop.NewValue, prop.ColumnName);
-        }
-
-        await _context.SaveChangesAsync();
-
-        return Ok(ApiResponse<PriorityDto>.Success(PriorityToDto(entity),$"Edit Succeeded"));
     }
 
     [HttpDelete("delete/{id}")]

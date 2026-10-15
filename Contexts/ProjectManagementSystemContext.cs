@@ -226,19 +226,20 @@ public partial class ProjectManagementSystemContext : DbContext
 
         modelBuilder.Entity<TaskUser>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("TaskUser");
+            entity.ToTable("TaskUser");
 
+            entity.Property(e => e.TaskUserId)
+                .HasDefaultValueSql("(newid())", "DF_TaskUser_TaskUserID")
+                .HasColumnName("TaskUserID");
             entity.Property(e => e.TaskId).HasColumnName("TaskID");
             entity.Property(e => e.UserId).HasColumnName("UserID");
 
-            entity.HasOne(d => d.Task).WithMany()
+            entity.HasOne(d => d.Task).WithMany(p => p.TaskUsers)
                 .HasForeignKey(d => d.TaskId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_TaskUser_TaskManagement");
 
-            entity.HasOne(d => d.User).WithMany()
+            entity.HasOne(d => d.User).WithMany(p => p.TaskUsers)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_TaskUser_User");
@@ -301,19 +302,20 @@ public partial class ProjectManagementSystemContext : DbContext
 
         modelBuilder.Entity<UserProject>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("UserProject");
+            entity.ToTable("UserProject");
 
+            entity.Property(e => e.UserProjectId)
+                .HasDefaultValueSql("(newid())", "DF_UserProject_UserProjectID")
+                .HasColumnName("UserProjectID");
             entity.Property(e => e.ProjectId).HasColumnName("ProjectID");
             entity.Property(e => e.UserId).HasColumnName("UserID");
 
-            entity.HasOne(d => d.Project).WithMany()
+            entity.HasOne(d => d.Project).WithMany(p => p.UserProjects)
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserProject_Project");
 
-            entity.HasOne(d => d.User).WithMany()
+            entity.HasOne(d => d.User).WithMany(p => p.UserProjects)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserProject_User");

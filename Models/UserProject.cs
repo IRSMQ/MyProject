@@ -5,6 +5,8 @@ namespace Test26.Models;
 
 public partial class UserProject
 {
+    public Guid UserProjectId { get; set; }
+
     public Guid ProjectId { get; set; }
 
     public Guid UserId { get; set; }

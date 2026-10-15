@@ -34,4 +34,6 @@ public partial class Project
     public virtual Status? Status { get; set; }
 
     public virtual ICollection<TaskManagement> TaskManagements { get; set; } = new List<TaskManagement>();
+
+    public virtual ICollection<UserProject> UserProjects { get; set; } = new List<UserProject>();
 }

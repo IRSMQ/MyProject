@@ -31,5 +31,9 @@ public partial class User
 
     public virtual Role? Role { get; set; }
 
+    public virtual ICollection<TaskUser> TaskUsers { get; set; } = new List<TaskUser>();
+
     public virtual ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
+
+    public virtual ICollection<UserProject> UserProjects { get; set; } = new List<UserProject>();
 }

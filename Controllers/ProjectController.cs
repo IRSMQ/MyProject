@@ -6,6 +6,7 @@ using Test26.Service;
 using Test26.DTOs;
 using Test26.ApiR;
 
+namespace Test26.Controller;
 [ApiController]
 [Route("api/[controller]")]
 public class ProjectController : ControllerBase
@@ -91,9 +92,13 @@ public class ProjectController : ControllerBase
         if (exists)
             throw new InvalidOperationException("Project already exists.");
 
+        
         var eid = Guid.NewGuid();
+        Project entity;
 
-        var entity = new Project
+
+
+        entity = new Project
         {
             ProjectId = eid,
             ProjectName = dto.ProjectName,

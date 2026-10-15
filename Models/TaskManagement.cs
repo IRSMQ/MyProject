@@ -38,4 +38,6 @@ public partial class TaskManagement
     public virtual Project Project { get; set; } = null!;
 
     public virtual Status? Status { get; set; }
+
+    public virtual ICollection<TaskUser> TaskUsers { get; set; } = new List<TaskUser>();
 }
