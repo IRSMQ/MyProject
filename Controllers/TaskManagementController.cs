@@ -600,22 +600,22 @@ public class TaskManagementController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var entity = await _context.TaskManagements
-            .Include(r => r.Project)
-            .Include(r => r.Status)
-            .Include(r => r.Priority)
-            .Include(r => r.Parent)
+            .Include(e => e.Project)
+            .Include(e => e.Status)
+            .Include(e => e.Priority)
+            .Include(e => e.Parent)
             .FirstOrDefaultAsync(e => e.TaskManagementId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Task Not Found");
 
         var exist = await _context.TaskManagements
-            .AnyAsync(r => r.ParentId == id);
+            .AnyAsync(e => e.ParentId == id);
 
         if (exist)
             throw new InvalidOperationException("This task has a sub-task");
 
-        entity.IsDeleted = true;
+        await _logService.Log("Delete", nameof(TaskManagement), entity.TaskManagementId);
 
-        var logId = await _logService.Log("Delete", nameof(TaskManagement), entity.TaskManagementId);
+        entity.IsDeleted = true;
 
         await _context.SaveChangesAsync();
 

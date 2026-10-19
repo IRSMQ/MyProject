@@ -175,8 +175,6 @@ public class UserPermissionController : ControllerBase
 
         await _logService.Log("delete", nameof(UserPermission), entity.UserPermissionId);
 
-        await _context.SaveChangesAsync();
-
         var newTU = new UserPermissionDto
         {
             PermissionId = entity.PermissionId,
@@ -184,6 +182,8 @@ public class UserPermissionController : ControllerBase
             PermissionName = entity.Permission.PermissionName,
             UserName = entity.User.UserFullName
         };
+
+        await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<UserPermissionDto>.Success(newTU,$"Delete Succeeded"));
     }

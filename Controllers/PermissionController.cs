@@ -141,6 +141,8 @@ public class PermissionController : ControllerBase
 
         await _logService.Log("Delete", nameof(Permission), entity.PermissionId);
 
+
+        /////////////////////////////////////////////////////////
         var entityRolePermission = await _context.RolePermissions
             .Where(e => e.PermissionId == id && !e.IsDeleted)
             .ToListAsync();
@@ -148,9 +150,11 @@ public class PermissionController : ControllerBase
         foreach (var e in entityRolePermission)
         {
             e.IsDeleted = true;
-            await _logService.Log("Delete", nameof(RolePermission), e.Rpid);
+            await _logService.Log("Delete", nameof(RolePermission), e.RolePermissionId);
         }
 
+
+        /////////////////////////////////////////////////////////
         var entityUserPermission = await _context.UserPermissions
             .Where(e => e.PermissionId == id && !e.IsDeleted)
             .ToListAsync();

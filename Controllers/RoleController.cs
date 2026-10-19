@@ -138,10 +138,10 @@ public class RoleController : ControllerBase
     {
         var entity = await _context.Roles
             .FirstOrDefaultAsync(e => e.RoleId == id && !e.IsDeleted)
-            ?? throw new KeyNotFoundException($"Role with ID {id} not found.");
+            ?? throw new KeyNotFoundException($"Role Not Found");
 
-        
 
+        /////////////////////////////////////////////////////////
         var entityUser = await _context.Users
             .Where(e => e.RoleId == id && !e.IsDeleted)
             .ToListAsync();
@@ -150,11 +150,18 @@ public class RoleController : ControllerBase
         {
             u.RoleId = null;
 
-            var userLogId = await _logService.Log("Edit", nameof(User), u.UserId);
+            var userLogId = await _logService.Log("Edit", nameof(Users), u.UserId);
 
-            await _logService.ChangLog(userLogId, id.ToString(), "null", nameof(u.RoleId));
+            await _logService.ChangLog(
+                userLogId,
+                id.ToString(),
+                "null",
+                nameof(u.RoleId)
+            );
         }
 
+
+        /////////////////////////////////////////////////////////
         var entityRolePermission = await _context.RolePermissions
             .Where(e => e.RoleId == id && !e.IsDeleted)
             .ToListAsync();
@@ -162,7 +169,7 @@ public class RoleController : ControllerBase
         foreach (var e in entityRolePermission)
         {
             e.IsDeleted = true;
-            var userLogId = await _logService.Log("Delete", nameof(RolePermission), e.Rpid);
+            var userLogId = await _logService.Log("Delete", nameof(RolePermission), e.RolePermissionId);
         }
 
         entity.IsDeleted = true;

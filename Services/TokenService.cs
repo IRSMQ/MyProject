@@ -16,7 +16,7 @@ public class TokenService
         _configuration = configuration;
     }
 
-    public string GenerateToken(User user)
+    public string GenerateToken(Users user)
     {
         var claims = new List<Claim>
         {

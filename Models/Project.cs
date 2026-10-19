@@ -27,7 +27,7 @@ public partial class Project
 
     public bool IsDeleted { get; set; }
 
-    public virtual User? Manager { get; set; }
+    public virtual Users? Manager { get; set; }
 
     public virtual Priority? Priority { get; set; }
 

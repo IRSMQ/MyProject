@@ -15,5 +15,5 @@ public partial class TaskUser
 
     public virtual TaskManagement Task { get; set; } = null!;
 
-    public virtual User User { get; set; } = null!;
+    public virtual Users User { get; set; } = null!;
 }

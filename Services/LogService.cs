@@ -19,13 +19,13 @@ public class LogService
 
     public async Task<Guid> Log(string logTypeName, string tableName, Guid relatedId)
     {
-        /*
-        var userIdClaim = _httpContextAccessor.HttpContext?.User
-            .FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        */
+        
+        // var userIdClaim = _httpContextAccessor.HttpContext?.User
+        //     .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
         
         var logId = Guid.NewGuid();
-        var ev = new Log
+        var newLog = new Log
         {
             LogId = logId,
             LogType = logTypeName,
@@ -35,9 +35,7 @@ public class LogService
             Date = DateTime.Now
         };
 
-        await _context.Logs.AddAsync(ev);
-        // await _context.SaveChangesAsync();
-
+        await _context.Logs.AddAsync(newLog);
         return logId;
     }
 
@@ -52,6 +50,5 @@ public class LogService
         };
         
         await _context.ChangeLogs.AddAsync(ncl);
-        // await _context.SaveChangesAsync();
     }
 }

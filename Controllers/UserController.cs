@@ -72,7 +72,7 @@ public class UserController : ControllerBase
         if (exists)
             throw new InvalidOperationException("Username already exists");
 
-        var user = new User();
+        var user = new Users();
         string text;
 
         if (dto.UserId.HasValue)
@@ -110,7 +110,7 @@ public class UserController : ControllerBase
 
             if (modifiedProps.Any())
             {
-                var logId = await _logService.Log("Edit", nameof(User), entity.UserId);
+                var logId = await _logService.Log("Edit", nameof(Users), entity.UserId);
 
                 foreach (var prop in modifiedProps)
                 {
@@ -125,15 +125,6 @@ public class UserController : ControllerBase
 
             user = entity;
             text = "Edit Succeeded";
-            // var newUser = entity;
-            // user.UserId = newUser.UserId;
-            // user.RoleId = newUser.RoleId;
-            // user.UserFullName = newUser.UserFullName;
-            // user.Username = newUser.Username;
-            // user.Email = newUser.UserEmail;
-            // user.Phone = newUser.UserPhone;
-            // user.Status = newUser.UserStatus;
-            // user.RoleName = newUser.Role.RoleName;
 
         }
         else
@@ -141,7 +132,7 @@ public class UserController : ControllerBase
             if (string.IsNullOrEmpty(dto.Username) || string.IsNullOrEmpty(dto.UserFullName) || string.IsNullOrEmpty(dto.UserPassword))
                 throw new InvalidOperationException("Username or User FullName or Password is NULL");
 
-            var newUser = new User
+            var newUser = new Users
             {
                 UserId = Guid.NewGuid(),
                 RoleId = dto.RoleId,
@@ -154,7 +145,7 @@ public class UserController : ControllerBase
 
             await _context.Users.AddAsync(newUser);
 
-            var logId = await _logService.Log("Add", nameof(User), newUser.UserId);
+            var logId = await _logService.Log("Add", nameof(Users), newUser.UserId);
 
             var entry = _context.Entry(newUser);
             foreach (var prop in entry.Properties)
@@ -172,15 +163,6 @@ public class UserController : ControllerBase
 
             user = newUser;
             text = "Delete Succeeded";
-
-            // user.UserId = newUser.UserId;
-            // user.RoleId = newUser.RoleId;
-            // user.UserFullName = newUser.UserFullName;
-            // user.Username = newUser.Username;
-            // user.Email = newUser.UserEmail;
-            // user.Phone = newUser.UserPhone;
-            // user.Status = newUser.UserStatus;
-            // user.RoleName = newUser.Role.RoleName;
         }
         
 
@@ -189,68 +171,28 @@ public class UserController : ControllerBase
         return Ok(ApiResponse<UserDto>.Success(UserToDto(user),$"{text}"));
     }
 
-    // [HttpPost("login")]
-    // public async Task<IActionResult> Login([FromBody] UserLoginDto userLoginDto)
-    // {
-    //     var user = await _context.Users
-    //         .Include(u => u.Role)
-    //         .FirstOrDefaultAsync(u => u.Username == userLoginDto.Username && !u.IsDeleted);
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] UserLoginDto userLoginDto)
+    {
+        var entity = await _context.Users
+            .Include(e => e.Role)
+            .FirstOrDefaultAsync(e => e.Username == userLoginDto.Username && !e.IsDeleted)
+            ?? throw new KeyNotFoundException("User not found");
 
-    //     if (user == null)
-    //         throw new KeyNotFoundException("User not found");
+        var isPasswordValid = _passwordHassherHandler.Verify(userLoginDto.Password, entity.UserPassword);
 
-    //     var isPasswordValid = _passwordHassherHandler.Verify(userLoginDto.Password, user.UserPassword);
-    //     if (!isPasswordValid)
-    //         throw new UnauthorizedAccessException("Invalid password");
+        if (!isPasswordValid)
+            throw new UnauthorizedAccessException("Invalid password");
 
-    //     var token = _tokenService.CreateToken(user);
+        var token = _tokenService.GenerateToken(entity);
 
-    //     return Ok(new UserToken
-    //     {
-    //         UserId = user.UserId,
-    //         Username = user.Username,
-    //         Token = token
-    //     });
-    // }
-
-    // [HttpPut("edit")]
-    // public async Task<IActionResult> EditUser([FromBody] UserDto dto)
-    // {
-    //     var user = await _context.Users
-    //         .FirstOrDefaultAsync(u => u.UserId == dto.UserId && !u.IsDeleted)
-    //         ?? throw new KeyNotFoundException("User not Found");
-
-    //     user.RoleId = dto.RoleId;
-    //     user.UserFullName = dto.UserFullName;
-    //     user.Username = dto.Username;
-    //     user.UserStatus = dto.Status;
-    //     user.UserEmail = dto.Email;
-    //     user.UserPhone = dto.Phone;
-
-    //     var entry = _context.Entry(user);
-    //     var modifiedProps = entry.Properties.Where(p => p.IsModified).ToList();
-
-    //     if (modifiedProps.Any())
-    //     {
-    //         var log = _logService.Log("Edit", nameof(User), user.UserId);
-    //         await _context.Logs.AddAsync(log);
-
-    //         foreach (var prop in modifiedProps)
-    //         {
-    //             var changeLog = _logService.ChangLog(
-    //                 log.LogId,
-    //                 prop.Metadata.Name,
-    //                 prop.OriginalValue?.ToString(),
-    //                 prop.CurrentValue?.ToString() ?? string.Empty
-    //             );
-    //             await _context.ChangeLogs.AddAsync(changeLog);
-    //         }
-    //     }
-
-    //     await _context.SaveChangesAsync();
-
-    //     return Ok(UserToDto(user));
-    // }
+        return Ok(new UserToken
+        {
+            UserId = entity.UserId,
+            Username = entity.Username,
+            Token = token
+        });
+    }
 
     [HttpPatch("edit/status")]
     public async Task<IActionResult> EditStatus([FromBody] UserEditStatus dto)
@@ -261,7 +203,7 @@ public class UserController : ControllerBase
 
         if (entity.UserStatus != dto.Status)
         {
-            var logId = await _logService.Log("Edit", nameof(User), entity.UserId);
+            var logId = await _logService.Log("Edit", nameof(Users), entity.UserId);
 
             await _logService.ChangLog(
                 logId,
@@ -272,20 +214,6 @@ public class UserController : ControllerBase
             
             entity.UserStatus = dto.Status;
         }
-        
-        // if (entry.Property(u => u.UserStatus).IsModified)
-        // {
-        //     var log = _logService.Log("EditStatus", nameof(User), user.UserId);
-        //     await _context.Logs.AddAsync(log);
-
-        //     var changeLog = _logService.ChangLog(
-        //         log.LogId,
-        //         nameof(user.UserStatus),
-        //         entry.Property(u => u.UserStatus).OriginalValue?.ToString(),
-        //         user.UserStatus.ToString()
-        //     );
-        //     await _context.ChangeLogs.AddAsync(changeLog);
-        // }
 
         await _context.SaveChangesAsync();
 
@@ -296,48 +224,63 @@ public class UserController : ControllerBase
     public async Task<IActionResult> DeleteUser(Guid id)
     {
         var entity = await _context.Users
-            .FirstOrDefaultAsync(u => u.UserId == id && !u.IsDeleted)
+            .FirstOrDefaultAsync(e => e.UserId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User not Found");
 
-        var deleteList = new List<string>();
-        entity.IsDeleted = true;
-        await _logService.Log("Delete", nameof(User), entity.UserId);
-        deleteList.Add(entity.UserId.ToString());
 
+        /////////////////////////////////////////////////////////
         var entityUserPermission = await _context.UserPermissions
-            .Where(e => e.UserId == entity.UserId)
+            .Where(e => e.UserId == entity.UserId && !e.IsDeleted)
             .ToListAsync();
 
         if (entityUserPermission.Count() > 0)
         {
-            foreach (var userPermission in entityUserPermission)
+            foreach (var e in entityUserPermission)
             {
-                userPermission.IsDeleted = true;
-                await _logService.Log("Delete", nameof(UserPermission), userPermission.UserPermissionId);
-                deleteList.Add(userPermission.UserPermissionId.ToString());
+                e.IsDeleted = true;
+                await _logService.Log("Delete", nameof(UserPermission), e.UserPermissionId);
             }
         }
 
+
+        /////////////////////////////////////////////////////////
         var entityUserProject = await _context.UserProjects
-            .Where(e => e.UserId == entity.UserId)
+            .Where(e => e.UserId == entity.UserId && !e.IsDeleted)
             .ToListAsync();
 
         if (entityUserProject.Count() > 0)
         {
-            foreach (var userProjects in entityUserProject)
+            foreach (var e in entityUserProject)
             {
-                userProjects.IsDeleted = true;
-                await _logService.Log("Delete", nameof(UserProject), userProjects.UserProjectId);
-                deleteList.Add(userProjects.UserProjectId.ToString());
+                e.IsDeleted = true;
+                await _logService.Log("Delete", nameof(UserProject), e.UserProjectId);
             }
         }
 
+
+        /////////////////////////////////////////////////////////
+        var entityTaskUser = await _context.TaskUsers
+            .Where(e => e.UserId == entity.UserId && !e.IsDeleted)
+            .ToListAsync();
+
+        if (entityTaskUser.Count() > 0)
+        {
+            foreach (var e in entityTaskUser)
+            {
+                e.IsDeleted = true;
+                await _logService.Log("Delete", nameof(TaskUser), e.TaskUserId);
+            }
+        }
+
+        entity.IsDeleted = true;
+        await _logService.Log("Delete", nameof(Users), entity.UserId);
+
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<UserDto>.Success(UserToDto(entity),$"Delete Succeeded\n{deleteList}"));
+        return Ok(ApiResponse<UserDto>.Success(UserToDto(entity),$"Delete Succeeded"));
     }
 
-    private static UserDto UserToDto(User user)
+    private static UserDto UserToDto(Users user)
     {
         return new UserDto
         {

@@ -15,5 +15,5 @@ public partial class UserProject
 
     public virtual Project Project { get; set; } = null!;
 
-    public virtual User User { get; set; } = null!;
+    public virtual Users User { get; set; } = null!;
 }

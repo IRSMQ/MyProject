@@ -328,6 +328,34 @@ public class ProjectController : ControllerBase
 
         await _logService.Log("Delete", nameof(Project), entity.ProjectId);
 
+        /////////////////////////////////////////////////////////
+        var entityUserProject = await _context.UserProjects
+            .Where(e => e.ProjectId == id && !e.IsDeleted)
+            .ToListAsync();
+
+        if (entityUserProject.Count() > 0)
+        {
+            foreach (var e in entityUserProject)
+            {
+                await _logService.Log("Delete", nameof(UserProject), e.UserProjectId);
+                e.IsDeleted = true;
+            }
+        }
+
+        /////////////////////////////////////////////////////////
+        var entityTaskManagement = await _context.TaskManagements
+            .Where(e => e.ProjectId == id && !e.IsDeleted)
+            .ToListAsync();
+
+        if (entityTaskManagement.Count() > 0)
+        {
+            foreach (var e in entityTaskManagement)
+            {
+                await _logService.Log("Delete", nameof(TaskManagement), e.TaskManagementId);
+                e.IsDeleted = true;
+            }
+        }
+
         await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Delete Succeeded"));

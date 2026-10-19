@@ -141,19 +141,65 @@ public class StatusController : ControllerBase
     {
         var entity = await _context.Statuses
             .FirstOrDefaultAsync(e => e.StatusId == id && !e.IsDeleted)
-            ?? throw new KeyNotFoundException($"Status with ID {id} not found.");
+            ?? throw new KeyNotFoundException($"Status Not Found");
+
+
+        /////////////////////////////////////////////////////////
+        var entityProject = await _context.Projects
+            .Where(e => e.StatusId == id && !e.IsDeleted)
+            .ToListAsync();
+
+        if (entityProject.Count() > 0)
+        {
+            foreach (var e in entityProject)
+            {
+                var logId = await _logService.Log("Edit", nameof(Project), e.ProjectId);
+
+                await _logService.ChangLog(
+                    logId,
+                    e.StatusId.ToString(),
+                    "null",
+                    nameof(e.StatusId)
+                );
+
+                e.StatusId = null;
+            }
+        }
+
+
+        /////////////////////////////////////////////////////////
+        var entityTaskManagement = await _context.TaskManagements
+            .Where(e => e.StatusId == id && !e.IsDeleted)
+            .ToListAsync();
+
+        if (entityTaskManagement.Count() > 0)
+        {
+            foreach (var e in entityTaskManagement)
+            {
+                var logId = await _logService.Log("Edit", nameof(TaskManagement), e.TaskManagementId);
+
+                await _logService.ChangLog(
+                    logId,
+                    e.StatusId.ToString(),
+                    "null",
+                    nameof(e.StatusId)
+                );
+
+                e.StatusId = null;
+            }
+        }
 
         entity.IsDeleted = true;
     
         await _logService.Log("Delete", nameof(Status), entity.StatusId);
-
-        await _context.SaveChangesAsync();
 
         var newStatus = new StatusDto
         {
             StatusId = entity.StatusId,
             StatusName = entity.StatusName
         };
+
+        await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<StatusDto>.Success(newStatus,$"Delete Succeeded"));
     }

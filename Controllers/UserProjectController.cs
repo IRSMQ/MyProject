@@ -175,8 +175,6 @@ public class UserProjectController : ControllerBase
 
         await _logService.Log("delete", nameof(UserProject), entity.UserProjectId);
 
-        await _context.SaveChangesAsync();
-
         var newTU = new UserProjectDto
         {
             ProjectId = entity.ProjectId,
@@ -184,6 +182,8 @@ public class UserProjectController : ControllerBase
             ProjectName = entity.Project.ProjectName,
             UserName = entity.User.UserFullName
         };
+
+        await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<UserProjectDto>.Success(newTU,$"Delete Succeeded"));
     }

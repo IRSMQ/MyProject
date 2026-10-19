@@ -118,6 +118,8 @@ public class PriorityController : ControllerBase
 
         await _logService.Log("Delete", nameof(Priority), entity.PriorityId);
 
+
+        /////////////////////////////////////////////////////////
         var entityProject = await _context.Projects
             .Where(e => e.PriorityId == id && !e.IsDeleted)
             .ToListAsync();
@@ -136,6 +138,8 @@ public class PriorityController : ControllerBase
             e.Priority = null;
         }
 
+
+        /////////////////////////////////////////////////////////
         var entityTaskManagement = await _context.TaskManagements
             .Where(e => e.PriorityId == id && !e.IsDeleted)
             .ToListAsync();
