@@ -17,5 +17,5 @@ public partial class UserPermission
 
     public virtual Permission Permission { get; set; } = null!;
 
-    public virtual Users User { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
 }

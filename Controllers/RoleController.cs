@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Test26.ApiR;
@@ -54,88 +56,104 @@ public class RoleController : ControllerBase
         return Ok(ApiResponse<RoleDto>.Success(entity,$"Get By ID Succeeded"));
     }
 
+    [Authorize]
     [HttpPost("add")]
     public async Task<IActionResult> Add([FromBody] RoleDto dto)
     {
-        var exists = await _context.Roles
-            .AnyAsync(p => p.RoleName == dto.RoleName && !p.IsDeleted);
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
 
-        if (exists)
-            throw new InvalidOperationException("Role already exists.");
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddRole");
 
-        var role = new RoleDto { };
+        //////////////////////////////////////////////////////
+        
+        var entity = await _context.Roles
+            .FirstOrDefaultAsync(e => e.RoleName == dto.RoleName && !e.IsDeleted);
+
+        if (entity != null)
+            throw new InvalidOperationException("Role already exists");
+
+        string text;
 
         if (dto.RoleId.HasValue)
         {
-            var entity = await _context.Roles
-                .FindAsync(dto.RoleId)
+            entity = await _context.Roles
+                .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Role with this ID not found");
 
-            entity.RoleName = dto.RoleName;
-
-            var entry = _context.Entry(entity);
-
-            var modifiedProperties = entry.Properties
-                .Where(e => e.IsModified)
-                .Select(e => new
-                {
-                    CulomnName = e.Metadata.Name,
-                    OldValue = e.OriginalValue?.ToString() ?? "null",
-                    NewValue = e.CurrentValue?.ToString() ?? "null"
-                })
-                .ToList();
-
-            if (modifiedProperties.Any())
+            if (entity.RoleName == dto.RoleName)
             {
-                var logId = await _logService.Log("Edit", nameof(Role), entity.RoleId);
-
-                foreach (var prop in modifiedProperties)
-                    await _logService.ChangLog(logId, prop.OldValue, prop.NewValue, prop.CulomnName);
+                text = "Role Exist";
             }
+            else
+            {
+                var logId = await _logService.Log("Edit", nameof(Role), dto.RoleId.Value);
 
-            role.RoleId = entity.RoleId;
-            role.RoleName = entity.RoleName;
+                await _logService.ChangLog(
+                    logId,
+                    entity.RoleName,
+                    dto.RoleName,
+                    nameof(Role.RoleName)
+                );
+
+                entity.RoleName = dto.RoleName;
+                text = "Edit Succeeded";
+            }
         }
-
         else
         {
-            var newEntity = new Role
+            entity = new Role
             {
                 RoleId = Guid.NewGuid(),
                 RoleName = dto.RoleName,
                 IsDeleted = false
             };
 
-            _context.Roles.Add(newEntity);
+            await _context.Roles.AddAsync(entity);
 
-            var logId = await _logService.Log("Create", nameof(Role), newEntity.RoleId);
+            var logId = await _logService.Log("Create", nameof(Role), entity.RoleId);
 
-            var entry = _context.Entry(newEntity);
+            await _logService.ChangLog(
+                logId,
+                "null",
+                entity.RoleId.ToString(),
+                nameof(entity.RoleId)
+                );
 
-            foreach (var prop in entry.Properties)
-            {
-                if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        "null",
-                        prop.CurrentValue?.ToString() ?? "null",
-                        prop.Metadata.Name
-                    );
-                }
-            }
-            role.RoleId = newEntity.RoleId;
-            role.RoleName = newEntity.RoleName;
+            await _logService.ChangLog(
+                logId,
+                "null",
+                entity.RoleName,
+                nameof(entity.RoleName)
+                );
+
+
+            await _context.AddAsync(entity);
+            text = "Add Succeeded";
         }
+
+        var newEntity = new RoleDto
+        {
+            RoleId = entity.RoleId,
+            RoleName = entity.RoleName
+        };
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<RoleDto>.Success(role,$"Succeeded"));
+        return Ok(ApiResponse<RoleDto>.Success(newEntity, $"{text}"));
     }
 
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteRole");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.Roles
             .FirstOrDefaultAsync(e => e.RoleId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException($"Role Not Found");
@@ -150,7 +168,7 @@ public class RoleController : ControllerBase
         {
             u.RoleId = null;
 
-            var userLogId = await _logService.Log("Edit", nameof(Users), u.UserId);
+            var userLogId = await _logService.Log("Edit", nameof(User), u.UserId);
 
             await _logService.ChangLog(
                 userLogId,

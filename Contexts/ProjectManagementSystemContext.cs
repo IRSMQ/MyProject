@@ -35,7 +35,7 @@ public partial class ProjectManagementSystemContext : DbContext
 
     public virtual DbSet<TaskUser> TaskUsers { get; set; }
 
-    public virtual DbSet<Users> Users { get; set; }
+    public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<UserPermission> UserPermissions { get; set; }
 
@@ -90,6 +90,8 @@ public partial class ProjectManagementSystemContext : DbContext
         modelBuilder.Entity<Permission>(entity =>
         {
             entity.ToTable("Permission");
+
+            entity.HasIndex(e => e.PermissionName, "IX_Permission").IsUnique();
 
             entity.Property(e => e.PermissionId)
                 .HasDefaultValueSql("(newid())", "DF_Permission_PermissionId")
@@ -153,13 +155,11 @@ public partial class ProjectManagementSystemContext : DbContext
 
         modelBuilder.Entity<RolePermission>(entity =>
         {
-            entity.HasKey(e => e.RolePermissionId);
-
             entity.ToTable("RolePermission");
 
             entity.Property(e => e.RolePermissionId)
                 .HasDefaultValueSql("(newid())", "DF_RolePermission_RPID")
-                .HasColumnName("RPID");
+                .HasColumnName("RolePermissionID");
             entity.Property(e => e.PermissionId).HasColumnName("PermissionID");
             entity.Property(e => e.RoleId).HasColumnName("RoleID");
 
@@ -245,7 +245,7 @@ public partial class ProjectManagementSystemContext : DbContext
                 .HasConstraintName("FK_TaskUser_User");
         });
 
-        modelBuilder.Entity<Users>(entity =>
+        modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("User");
 

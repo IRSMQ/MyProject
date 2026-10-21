@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "xrkEZy2jRMQ=",
+  "dgSpecHash": "AiWjotsZBPY=",
   "success": true,
   "projectFilePath": "C:\\Codes\\CS\\Tests\\Test26\\Test26.csproj",
   "expectedPackageFiles": [
@@ -58,7 +58,7 @@
     "C:\\Users\\Administrator\\.nuget\\packages\\humanizer.core.zh-hant\\2.14.1\\humanizer.core.zh-hant.2.14.1.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\10.0.12\\microsoft.aspnetcore.authentication.jwtbearer.10.0.12.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.aspnetcore.diagnostics.entityframeworkcore\\10.0.12\\microsoft.aspnetcore.diagnostics.entityframeworkcore.10.0.12.nupkg.sha512",
-    "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.12\\microsoft.aspnetcore.openapi.10.0.12.nupkg.sha512",
+    "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.13\\microsoft.aspnetcore.openapi.10.0.13.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.aspnetcore.razor.language\\6.0.24\\microsoft.aspnetcore.razor.language.6.0.24.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\8.0.0\\microsoft.bcl.asyncinterfaces.8.0.0.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.bcl.cryptography\\10.0.2\\microsoft.bcl.cryptography.10.0.2.nupkg.sha512",
@@ -98,7 +98,7 @@
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.identitymodel.protocols.openidconnect\\8.19.2\\microsoft.identitymodel.protocols.openidconnect.8.19.2.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.identitymodel.tokens\\8.23.0\\microsoft.identitymodel.tokens.8.23.0.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.net.stringtools\\17.11.48\\microsoft.net.stringtools.17.11.48.nupkg.sha512",
-    "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.openapi\\2.12.0\\microsoft.openapi.2.12.0.nupkg.sha512",
+    "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.openapi\\2.12.2\\microsoft.openapi.2.12.2.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.sqlserver.server\\1.0.0\\microsoft.sqlserver.server.1.0.0.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.visualstudio.solutionpersistence\\1.0.52\\microsoft.visualstudio.solutionpersistence.1.0.52.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\microsoft.visualstudio.web.codegeneration\\10.0.2\\microsoft.visualstudio.web.codegeneration.10.0.2.nupkg.sha512",
@@ -119,7 +119,7 @@
     "C:\\Users\\Administrator\\.nuget\\packages\\nuget.projectmodel\\6.12.1\\nuget.projectmodel.6.12.1.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\nuget.protocol\\6.12.1\\nuget.protocol.6.12.1.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\nuget.versioning\\6.12.1\\nuget.versioning.6.12.1.nupkg.sha512",
-    "C:\\Users\\Administrator\\.nuget\\packages\\scalar.aspnetcore\\2.17.6\\scalar.aspnetcore.2.17.6.nupkg.sha512",
+    "C:\\Users\\Administrator\\.nuget\\packages\\scalar.aspnetcore\\2.18.0\\scalar.aspnetcore.2.18.0.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\system.clientmodel\\1.8.0\\system.clientmodel.1.8.0.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\system.codedom\\6.0.0\\system.codedom.6.0.0.nupkg.sha512",
     "C:\\Users\\Administrator\\.nuget\\packages\\system.composition\\9.0.0\\system.composition.9.0.0.nupkg.sha512",
@@ -157,6 +157,30 @@
       "warningLevel": 1,
       "filePath": "C:\\Codes\\CS\\Tests\\Test26\\Test26.csproj",
       "libraryId": "NuGet.Protocol",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'System.Security.Cryptography.Pkcs' 9.0.11 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-2fmv-rv2c-59x7",
+      "projectPath": "C:\\Codes\\CS\\Tests\\Test26\\Test26.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Codes\\CS\\Tests\\Test26\\Test26.csproj",
+      "libraryId": "System.Security.Cryptography.Pkcs",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'System.Security.Cryptography.Pkcs' 9.0.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-846f-f764-76mx",
+      "projectPath": "C:\\Codes\\CS\\Tests\\Test26\\Test26.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Codes\\CS\\Tests\\Test26\\Test26.csproj",
+      "libraryId": "System.Security.Cryptography.Pkcs",
       "targetGraphs": [
         "net10.0"
       ]

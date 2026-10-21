@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Test26.Models;
 
-public partial class Users
+public partial class User
 {
     public Guid UserId { get; set; }
 

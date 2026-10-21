@@ -51,4 +51,54 @@ public class LogService
         
         await _context.ChangeLogs.AddAsync(ncl);
     }
+
+    public async Task<bool> CheckToken(Guid tokenUserId, Guid? tokenRoleId, string PermissionTableName){
+
+        if (string.IsNullOrEmpty(tokenRoleId.ToString()))
+            throw new InvalidOperationException("Token Is Null");
+
+        var entityRole = await _context.Roles
+            .FirstOrDefaultAsync(e => e.RoleId == tokenRoleId);
+
+        if (entityRole.RoleName != "Manager")
+        {
+            var entityRolePermission = await _context.RolePermissions
+                .Where(e => e.RoleId == tokenRoleId && !e.IsDeleted)
+                .ToListAsync();
+
+            var entityUserPermission = await _context.UserPermissions
+                .Where(e => e.UserId == tokenUserId && !e.IsDeleted)
+                .ToListAsync();
+
+            bool check1 = false;
+            bool check2 = true;
+
+            if (entityRolePermission.Count > 0)
+            {
+                foreach (var e in entityRolePermission)
+                {
+                    if (e.Permission.PermissionName == PermissionTableName)
+                        check1 = true;
+                }
+            }
+
+            if (entityUserPermission.Count() > 0)
+            {
+                foreach (var e in entityUserPermission)
+                {
+                    if (e.Permission.PermissionName == "DeleteUserProject" && e.Bit == false)
+                        check2 = false;
+                }
+            }
+
+            if (!check1 && !check2)
+                throw new InvalidOperationException("This user does not have this level of access");
+            else
+                return true;
+        }
+        else
+        {
+            return true;
+        }
+    }
 }

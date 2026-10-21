@@ -5,6 +5,8 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using Test26.Models;
 using Test26.DTOs;
+using Test26.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace Test26.Service;
 
@@ -16,12 +18,12 @@ public class TokenService
         _configuration = configuration;
     }
 
-    public string GenerateToken(Users user)
+    public string GenerateToken(User user)
     {
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
+            new Claim(ClaimTypes.Role, user.RoleId.ToString()),
             new Claim(ClaimTypes.Name, user.Username)
         };
 

@@ -5,6 +5,9 @@ using Test26.Context;
 using Test26.Models;
 using Test26.Service;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+
 namespace Test26.Controller;
 
 
@@ -59,11 +62,19 @@ public class ChangeLogController : ControllerBase
         return Ok(ApiResponse<ChangeLog>.Success(entity,$"Get By ID Succeeded"));
     }
 
+    [Authorize]
     [HttpDelete("id/{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteChangeLog");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.ChangeLogs
-            .FirstOrDefaultAsync(c => c.ChangeLogId == id && !((ISoftDeletable)c).IsDeleted)
+            .FirstOrDefaultAsync(e => e.ChangeLogId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("There are no Change Log with this ID");
 
         entity.IsDeleted = true;

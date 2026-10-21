@@ -7,23 +7,15 @@ namespace Test26.DTOs;
 public partial class TMDtoAdd
 {
     public Guid? TaskId { get; set; }
+    public bool Nullable { get; set; }
     public Guid? ProjectId { get; set; }
-
     public Guid? StatusId { get; set; }
-
     public Guid? PriorityId { get; set; }
-
     public Guid? ParentId { get; set; }
-
     public string? Title { get; set; }
-
     public string? Desc { get; set; }
-
     public DateTime? CreationDate { get; set; } = DateTime.Now;
-
     public DateTime? StartDate { get; set; } = DateTime.Now;
-
     public DateTime? DueDate { get; set; }
-
     public DateTime? EndDate { get; set; }
 }

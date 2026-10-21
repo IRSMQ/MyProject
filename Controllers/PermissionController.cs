@@ -5,6 +5,8 @@ using Test26.Context;
 using Test26.DTOs;
 using Test26.Service;
 using Test26.Models;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 namespace Test26.Controller;
 
 [Route("api/[controller]")]
@@ -54,85 +56,95 @@ public class PermissionController : ControllerBase
         return Ok(ApiResponse<PermissionDto>.Success(entity,$"Get All Succeeded"));
     }
 
+    [Authorize]
     [HttpPost("add")]
     public async Task<IActionResult> Add([FromBody] PermissionAddDto dto)
     {
-        var exist = await _context.Permissions
-            .AnyAsync(e => e.PermissionName == dto.PermissionName && !e.IsDeleted);
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
 
-        var newEntity = new PermissionDto();
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddPermission");
+
+        //////////////////////////////////////////////////////
+        
+        var entity = await _context.Permissions
+            .FirstOrDefaultAsync(e => e.PermissionName == dto.PermissionName && !e.IsDeleted);
+
         string text;
 
-        if (exist)
+        if (entity != null)
             throw new InvalidOperationException("Permission already exists.");
 
-        else if (dto.PermissionId.HasValue)
+        if (dto.PermissionId.HasValue)
         {
-            var entity = await _context.Permissions
+            entity = await _context.Permissions
                 .FirstOrDefaultAsync(e => e.PermissionId == dto.PermissionId)
                 ?? throw new KeyNotFoundException("Permission Not Found");
 
-            
+            if (entity.PermissionName == dto.PermissionName)
+            {
+                text = "Permission Exist";
+            }
+            else
+            {
+                var logId = await _logService.Log("Edit", nameof(Permission), entity.PermissionId);
 
-            var logId = await _logService.Log("Edit", nameof(Permission), entity.PermissionId);
+                await _logService.ChangLog(
+                    logId,
+                    entity.PermissionName.ToString(),
+                    dto.PermissionName.ToString(),
+                    nameof(entity.PermissionName)
+                );
 
-            await _logService.ChangLog(
-                logId,
-                entity.PermissionName.ToString(),
-                dto.PermissionName.ToString(),
-                nameof(entity.PermissionName)
-            );
-
-            entity.PermissionName = dto.PermissionName;
-
-            newEntity.PermissionId = entity.PermissionId;
-            newEntity.PermissionName = entity.PermissionName;
-            text = "Edit Succeeded";
+                entity.PermissionName = dto.PermissionName;
+                text = "Edit Succeeded";
+            }
         }
         else
         {
-            var eid = Guid.NewGuid();
-
-            var entity = new Permission
+            entity = new Permission
             {
-                PermissionId = eid,
+                PermissionId = Guid.NewGuid(),
                 PermissionName = dto.PermissionName,
                 IsDeleted = false
             };
 
             _context.Permissions.Add(entity);
 
-            var logId = await _logService.Log("Create", nameof(Permission), eid);
+            var logId = await _logService.Log("Create", nameof(Permission), entity.PermissionId);
 
-            var entry = _context.Entry(entity);
+            await _logService.ChangLog(
+                logId,
+                "null",
+                entity.PermissionName,
+                nameof(entity.PermissionName)
+            );
 
-            foreach (var prop in entry.Properties)
-            {
-                if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        oldValue: "null",
-                        newValue: prop.CurrentValue?.ToString() ?? "null",
-                        columnName: prop.Metadata.Name
-                    );
-                }
-            }
-
-            newEntity.PermissionId = eid;
-            newEntity.PermissionName = dto.PermissionName;
             text = "Add Succeeded";
         }
 
+        var newEntityDto = new PermissionDto
+        {
+            PermissionId = entity.PermissionId,
+            PermissionName = entity.PermissionName
+        };
+
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<PermissionDto>.Success(newEntity,$"{text}"));
+        return Ok(ApiResponse<PermissionDto>.Success(newEntityDto, $"{text}"));
     }
 
-
+    [Authorize]
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeletePermission");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.Permissions
             .FirstOrDefaultAsync(p => p.PermissionId == id && !p.IsDeleted)
             ?? throw new KeyNotFoundException($"Permission Not Found");

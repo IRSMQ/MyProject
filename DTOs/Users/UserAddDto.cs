@@ -6,6 +6,7 @@ namespace Test26.DTOs;
 public partial class UserAddDto
 {
     public Guid? UserId { get; set; }
+    public bool Nullable { get; set; } = false;
     public Guid? RoleId { get; set; }
     public string? UserFullName { get; set; }
     public string? Username { get; set; }

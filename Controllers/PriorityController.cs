@@ -5,7 +5,8 @@ using Test26.DTOs;
 using Test26.Service;
 using Test26.Models;
 using Test26.Context;
-
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 namespace Test26.Controller;
 
 [Route("api/[controller]")]
@@ -53,16 +54,24 @@ public class PriorityController : ControllerBase
         return Ok(ApiResponse<PriorityDto>.Success(entity,$"Get By ID Succeeded"));
     }
 
+    [Authorize]
     [HttpPost("add")]
     public async Task<IActionResult> Add([FromBody] PriorityAddDto dto)
     {
-        var exists = await _context.Priorities
-            .AnyAsync(e => e.PriorityName == dto.PriorityName && !e.IsDeleted);
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
 
-        if (exists)
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddPriority");
+
+        //////////////////////////////////////////////////////
+        
+        var entity = await _context.Priorities
+            .FirstOrDefaultAsync(e => e.PriorityName == dto.PriorityName && !e.IsDeleted);
+
+        if (entity != null)
             throw new InvalidOperationException("Priority already exists.");
 
-        Priority entity;
+        string text;
 
         if (dto.PriorityId.HasValue)
         {
@@ -70,16 +79,24 @@ public class PriorityController : ControllerBase
                 .FirstOrDefaultAsync(e => e.PriorityId == dto.PriorityId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Priority Not Found");
 
-            var logId = await _logService.Log("Edit", nameof(Priority), entity.PriorityId);
+            if (entity.PriorityName == dto.PriorityName)
+            {
+                text = "Priority Name Exist";
+            }
+            else
+            {
+                var logId = await _logService.Log("Edit", nameof(Priority), entity.PriorityId);
 
-            await _logService.ChangLog(
-                logId,
-                entity.PriorityName.ToString(),
-                dto.PriorityName.ToString(),
-                nameof(entity.PriorityName)
-            );
+                await _logService.ChangLog(
+                    logId,
+                    entity.PriorityName.ToString(),
+                    dto.PriorityName.ToString(),
+                    nameof(entity.PriorityName)
+                );
 
-            entity.PriorityName = dto.PriorityName;
+                entity.PriorityName = dto.PriorityName;
+                text = "Edit Succeeded";
+            }
         }
         else
         {
@@ -90,8 +107,6 @@ public class PriorityController : ControllerBase
                 IsDeleted = false
             };
 
-            _context.Priorities.Add(entity);
-
             var logId = await _logService.Log("Create", nameof(Priority), entity.PriorityId);
 
             await _logService.ChangLog(
@@ -100,16 +115,27 @@ public class PriorityController : ControllerBase
                 dto.PriorityName,
                 nameof(entity.PriorityName)
             );
+
+            await _context.Priorities.AddAsync(entity);
+            text = "Add Succeeded";
         }
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<PriorityDto>.Success(PriorityToDto(entity),$"Add Succeeded"));
+        return Ok(ApiResponse<PriorityDto>.Success(PriorityToDto(entity), $"{text}"));
     }
 
+    [Authorize]
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeletePtiotity");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.Priorities
             .FirstOrDefaultAsync(e => e.PriorityId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException($"Priority Not Found");

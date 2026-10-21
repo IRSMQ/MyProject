@@ -21,5 +21,5 @@ public partial class Log
 
     public virtual ICollection<ChangeLog> ChangeLogs { get; set; } = new List<ChangeLog>();
 
-    public virtual Users? User { get; set; }
+    public virtual User? User { get; set; }
 }

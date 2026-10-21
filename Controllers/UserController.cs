@@ -7,7 +7,11 @@ using Test26.Service;
 
 using Test26.PasswordHassher;
 using Test26.ApiR;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 namespace Test26.Controller;
+
+
 [Route("api/[controller]")]
 [ApiController]
 public class UserController : ControllerBase
@@ -16,6 +20,8 @@ public class UserController : ControllerBase
     private readonly TokenService _tokenService;
     private readonly PasswordHassherHandler _passwordHassherHandler;
     private readonly LogService _logService;
+
+
 
     public UserController(
         ProjectManagementSystemContext context,
@@ -64,21 +70,39 @@ public class UserController : ControllerBase
         return Ok(ApiResponse<UserDto>.Success(UserToDto(user),$"Get By ID Succeeded"));
     }
 
+    [Authorize]
     [HttpPost("signup")]
     public async Task<IActionResult> Add([FromBody] UserAddDto dto)
     {
-        var exists = await _context.Users
-            .AnyAsync(u => u.Username == dto.Username && !u.IsDeleted);
-        if (exists)
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddUser");
+
+        //////////////////////////////////////////////////////
+        
+        var entity = await _context.Users
+            .FirstOrDefaultAsync(e => e.Username == dto.Username && !e.IsDeleted);
+        if (entity != null)
             throw new InvalidOperationException("Username already exists");
 
-        var user = new Users();
         string text;
 
         if (dto.UserId.HasValue)
         {
-            var entity = await _context.Users
-                .FirstOrDefaultAsync(u => u.UserId == dto.UserId && !u.IsDeleted)
+            entity = await _context.Users
+                .FirstOrDefaultAsync(e => e.UserId == dto.UserId && !e.IsDeleted)
+                ?? throw new KeyNotFoundException("User Not Found");
+                
+            if (dto.Nullable)
+            {
+                entity.RoleId = dto.RoleId;
+                entity.UserEmail = dto.UserEmail;
+                entity.UserPhone = dto.UserPhone;
+            }
+
+            entity = await _context.Users
+                .FirstOrDefaultAsync(e => e.UserId == dto.UserId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("User not Found");
 
             if (!string.IsNullOrEmpty(dto.UserFullName))
@@ -90,11 +114,6 @@ public class UserController : ControllerBase
             if (!string.IsNullOrEmpty(dto.UserPassword))
                 entity.UserPassword = _passwordHassherHandler.Hash(dto.UserPassword);
             
-
-            entity.RoleId = dto.RoleId;
-            entity.UserStatus = dto.UserStatus;
-            entity.UserEmail = dto.UserEmail;
-            entity.UserPhone = dto.UserPhone;
 
             var entry = _context.Entry(entity);
 
@@ -110,7 +129,7 @@ public class UserController : ControllerBase
 
             if (modifiedProps.Any())
             {
-                var logId = await _logService.Log("Edit", nameof(Users), entity.UserId);
+                var logId = await _logService.Log("Edit", nameof(Models.User), entity.UserId);
 
                 foreach (var prop in modifiedProps)
                 {
@@ -123,7 +142,6 @@ public class UserController : ControllerBase
                 }
             }
 
-            user = entity;
             text = "Edit Succeeded";
 
         }
@@ -132,7 +150,7 @@ public class UserController : ControllerBase
             if (string.IsNullOrEmpty(dto.Username) || string.IsNullOrEmpty(dto.UserFullName) || string.IsNullOrEmpty(dto.UserPassword))
                 throw new InvalidOperationException("Username or User FullName or Password is NULL");
 
-            var newUser = new Users
+            entity = new User
             {
                 UserId = Guid.NewGuid(),
                 RoleId = dto.RoleId,
@@ -143,11 +161,11 @@ public class UserController : ControllerBase
                 UserPhone = dto.UserPhone
             };
 
-            await _context.Users.AddAsync(newUser);
+            await _context.Users.AddAsync(entity);
 
-            var logId = await _logService.Log("Add", nameof(Users), newUser.UserId);
+            var logId = await _logService.Log("Create", nameof(Models.User), entity.UserId);
 
-            var entry = _context.Entry(newUser);
+            var entry = _context.Entry(entity);
             foreach (var prop in entry.Properties)
             {
                 if (prop.Metadata.Name != "IsDelete")
@@ -161,14 +179,13 @@ public class UserController : ControllerBase
                 }
             }
 
-            user = newUser;
-            text = "Delete Succeeded";
+            text = "Add Succeeded";
         }
         
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<UserDto>.Success(UserToDto(user),$"{text}"));
+        return Ok(ApiResponse<UserDto>.Success(UserToDto(entity),$"{text}"));
     }
 
     [HttpPost("login")]
@@ -194,16 +211,24 @@ public class UserController : ControllerBase
         });
     }
 
+    [Authorize]
     [HttpPatch("edit/status")]
     public async Task<IActionResult> EditStatus([FromBody] UserEditStatus dto)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditStatusUser");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.Users
             .FirstOrDefaultAsync(e => e.UserId == dto.Id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User not Found");
 
         if (entity.UserStatus != dto.Status)
         {
-            var logId = await _logService.Log("Edit", nameof(Users), entity.UserId);
+            var logId = await _logService.Log("Edit", nameof(Models.User), entity.UserId);
 
             await _logService.ChangLog(
                 logId,
@@ -220,9 +245,17 @@ public class UserController : ControllerBase
         return Ok(ApiResponse<UserDto>.Success(UserToDto(entity),$"Edit Status Succeeded"));
     }
 
+    [Authorize]
     [HttpDelete("delete/{id:guid}")]
-    public async Task<IActionResult> DeleteUser(Guid id)
+    public async Task<IActionResult> Delete(Guid id)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteUser");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.Users
             .FirstOrDefaultAsync(e => e.UserId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User not Found");
@@ -273,14 +306,14 @@ public class UserController : ControllerBase
         }
 
         entity.IsDeleted = true;
-        await _logService.Log("Delete", nameof(Users), entity.UserId);
+        await _logService.Log("Delete", nameof(Models.User), entity.UserId);
 
         await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<UserDto>.Success(UserToDto(entity),$"Delete Succeeded"));
     }
 
-    private static UserDto UserToDto(Users user)
+    private static UserDto UserToDto(User user)
     {
         return new UserDto
         {

@@ -13,6 +13,10 @@ using System.Text.Json;
 using Test26.PasswordHassher;
 using Scalar.AspNetCore;
 
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.OpenApi;
+using Microsoft.OpenApi;
+
 var builder = WebApplication.CreateBuilder(args);
 
 
@@ -21,6 +25,8 @@ builder.Services.AddDbContext<Test26.Context.ProjectManagementSystemContext>(opt
 
 var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Error in JWT KEY"));
 
+
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -81,6 +87,22 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
+
+
+// if (app.Environment.IsDevelopment())
+// {
+//     app.MapOpenApi();
+
+//     app.MapScalarApiReference(options =>
+//     {
+//         options.AddPreferredSecuritySchemes("Bearer");
+//         options.AddHttpAuthentication("Bearer", auth =>
+//         {
+//             auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIyYTEyZDMwZC04OWFmLTQ4ZDQtOWE4ZC0xMmI0YTMyYzE0ZjIiLCJyb2xlIjoiNjg2OWRlZmUtNTZjMy00OTBhLWJhYjItMGVhOTJlYzk3YmNhIiwidW5pcXVlX25hbWUiOiJNYW5hZ2VyIiwibmJmIjoxNzkyNDAyNTI2LCJleHAiOjE3OTI0MDk3MjYsImlhdCI6MTc5MjQwMjUyNiwiaXNzIjoiTXlBcGkiLCJhdWQiOiJNeUFwaVVzZXJzIn0.TSpXGP2SvRCf63y01JjhrtEP4OuoEPSKOkFb8MrM-dw";
+//         });
+//     });
+// }
+
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseRouting();

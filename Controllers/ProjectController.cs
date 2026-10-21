@@ -5,7 +5,8 @@ using Test26.Models;
 using Test26.Service;
 using Test26.DTOs;
 using Test26.ApiR;
-
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 namespace Test26.Controller;
 [ApiController]
 [Route("api/[controller]")]
@@ -83,146 +84,194 @@ public class ProjectController : ControllerBase
         return Ok(ApiResponse<ProjectDto>.Success(entity,$"Get By ID Succeeded"));
     }
 
+    [Authorize]
     [HttpPost("add")]
     public async Task<IActionResult> Add([FromBody] CreateProject dto)
     {
-        var exists = await _context.Projects
-            .AnyAsync(p => p.ProjectName == dto.ProjectName && !p.IsDeleted);
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
 
-        if (exists)
-            throw new InvalidOperationException("Project already exists.");
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddProject");
 
+        //////////////////////////////////////////////////////
         
-        var eid = Guid.NewGuid();
-        Project entity;
+        var entity = await _context.Projects
+            .FirstOrDefaultAsync(e => e.ProjectName == dto.ProjectName && !e.IsDeleted);
 
+        if (entity != null)
+            throw new InvalidOperationException("Project already exists.");        
 
-
-        entity = new Project
+        if (dto.ProjectId.HasValue)
         {
-            ProjectId = eid,
-            ProjectName = dto.ProjectName,
-            IsDeleted = false
-        };
-
-        _context.Projects.Add(entity);
-
-        var logId = await _logService.Log("Create", nameof(Project), eid);
-
-        var entry = _context.Entry(entity);
-        
-        foreach (var prop in entry.Properties)
-        {
-            if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
+            if (dto.Nullable)
             {
-                await _logService.ChangLog(
-                    logId,
-                    oldValue: "null",
-                    newValue: prop.CurrentValue?.ToString() ?? "null",
-                    columnName: prop.Metadata.Name
-                );
+                entity.ManagerId = dto.ManagerId;
+                entity.PriorityId = dto.PriorityId;
+                entity.StatusId = dto.StatusId;
+                entity.Desc = dto.Description;
+            }
+
+            if (dto.ManagerId.HasValue)
+            {
+                var entityUser = await _context.Users
+                    .Include(e => e.Role)
+                    .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
+                    ?? throw new KeyNotFoundException("Manager Not Found");
+
+                if (entityUser.RoleId != Guid.Parse("6869DEFE-56C3-490A-BAB2-0EA92EC97BCA"))
+                    throw new InvalidOperationException("The role must be Manager");
+
+                entity.ManagerId = dto.ManagerId.Value;
+            }
+
+            if (dto.PriorityId.HasValue)
+            {
+                var entityPriority = await _context.Priorities
+                    .FirstOrDefaultAsync(e => e.PriorityId == dto.PriorityId && !e.IsDeleted)
+                    ?? throw new KeyNotFoundException("Priority Not Found");
+
+                entity.PriorityId = dto.PriorityId;
+            }
+
+            if (dto.StatusId.HasValue)
+            {
+                var entityStatus = await _context.Statuses
+                    .FirstOrDefaultAsync(e => e.StatusId == dto.StatusId && !e.IsDeleted)
+                    ?? throw new KeyNotFoundException("Status Not Found");
+
+                entity.StatusId = dto.StatusId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.ProjectName))
+            {
+                var existsProject = await _context.Projects
+                    .FirstOrDefaultAsync(e => e.ProjectName == dto.ProjectName && e.ProjectId != entity.ProjectId && !e.IsDeleted)
+                    ?? throw new InvalidOperationException("Project Name Exist");
+
+                entity.ProjectName = dto.ProjectName;
+            }
+
+            entity.Desc = dto.Description ?? entity.Desc;
+
+            var entry = _context.Entry(entity);
+
+            var modifiedProps = entry.Properties
+                .Where(p => p.IsModified)
+                .Select(p => new
+                {
+                    ColumnName = p.Metadata.Name,
+                    OldVal = p.OriginalValue?.ToString() ?? "null",
+                    NewVal = p.CurrentValue?.ToString() ?? "null"
+                })
+                .ToList();
+
+            if (modifiedProps.Any())
+            {
+                var logId = await _logService.Log("Edit", nameof(Project), entity.ProjectId);
+
+                foreach (var change in modifiedProps)
+                    await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
             }
         }
+        else
+        {
+            if (dto.ManagerId.HasValue)
+            {
+                var entityUser = await _context.Users
+                    .Include(e => e.Role)
+                    .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
+                    ?? throw new KeyNotFoundException("User Not Found");
+
+                if (entityUser.Role.RoleName != "Manager")
+                    throw new InvalidOperationException("Role Is Not Manager");
+            }
+
+            if (dto.StartDate.HasValue && dto.CreationDate.HasValue)
+            {
+                if (dto.StartDate < dto.CreationDate)
+                {
+                    throw new InvalidOperationException("Start Date < Creation Date");
+                }
+            }
+
+            if (dto.EndDate.HasValue && dto.StartDate.HasValue)
+            {
+                if (dto.EndDate < dto.StartDate)
+                {
+                    throw new InvalidOperationException("End Date < Start Date");
+                }
+            }
+
+            if (dto.DueDate.HasValue && dto.EndDate.HasValue)
+            {
+                if (dto.DueDate > dto.EndDate)
+                {
+                    throw new InvalidOperationException("Due Date > End Date");
+                }
+            }
+
+            if (dto.DueDate.HasValue && dto.StartDate.HasValue)
+            {
+                if (dto.DueDate < dto.StartDate)
+                {
+                    throw new InvalidOperationException("Due Date < Start Date");
+                }
+            }
+
+            entity = new Project
+            {
+                ProjectId = Guid.NewGuid(),
+                StatusId = dto.StatusId,
+                ManagerId = dto.ManagerId,
+                PriorityId = dto.PriorityId,
+                ProjectName = dto.ProjectName,
+                Desc = dto.Description,
+                CreationDate = dto.CreationDate,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
+                DueDate = dto.DueDate,
+                IsDeleted = false
+            };
+
+            
+            var logId = await _logService.Log("Create", nameof(Project), entity.ProjectId);
+
+            var entry = _context.Entry(entity);
+            
+            foreach (var prop in entry.Properties)
+            {
+                if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
+                {
+                    await _logService.ChangLog(
+                        logId,
+                        oldValue: "null",
+                        newValue: prop.CurrentValue?.ToString() ?? "null",
+                        columnName: prop.Metadata.Name
+                    );
+                }
+            }
+
+            await _context.Projects.AddAsync(entity);
+        }
+
+        
 
         await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Add Succeeded"));
     }
 
-    [HttpPut("edit")]
-    public async Task<IActionResult> Edit([FromBody] ProjectEditDto dto)
-    {
-        var entity = await _context.Projects
-            .Include(p => p.Status)
-            .Include(p => p.Priority)
-            .Include(p => p.Manager)
-            .FirstOrDefaultAsync(r => r.ProjectId == dto.ProjectDtoId && !r.IsDeleted)
-            ?? throw new KeyNotFoundException("Project Not Found");
-
-        if (dto.Nullable)
-        {
-            entity.ManagerId = dto.ManagerId;
-            entity.PriorityId = dto.PriorityId;
-            entity.StatusId = dto.StatusId;
-            entity.Desc = dto.Description;
-        }
-
-        if (dto.ManagerId.HasValue)
-        {
-            var u = await _context.Users
-                .Include(p => p.Role)
-                .FirstOrDefaultAsync(r => r.UserId == dto.ManagerId)
-                ?? throw new KeyNotFoundException("Manager Not Found");
-
-            if (u.RoleId != Guid.Parse("6869DEFE-56C3-490A-BAB2-0EA92EC97BCA"))
-                throw new InvalidOperationException("The role must be Manager");
-
-            entity.ManagerId = dto.ManagerId.Value;
-        }
-
-        if (dto.PriorityId.HasValue)
-        {
-            var entityPriority = await _context.Priorities
-                .FindAsync(dto.PriorityId)
-                ?? throw new KeyNotFoundException("Priority Not Found");
-
-            entity.PriorityId = dto.PriorityId;
-        }
-
-        if (dto.StatusId.HasValue)
-        {
-            var entityStatus = await _context.Statuses
-                .FindAsync(dto.StatusId)
-                ?? throw new KeyNotFoundException("Status Not Found");
-
-            entity.StatusId = dto.StatusId;
-        }
-
-        if (!string.IsNullOrWhiteSpace(dto.Title))
-        {
-            var exists = await _context.Projects
-                .AnyAsync(r => r.ProjectName == dto.Title && r.ProjectId != entity.ProjectId && !r.IsDeleted);
-
-            if (exists)
-                throw new InvalidOperationException("Project Name Exist");
-
-            entity.ProjectName = dto.Title;
-        }
-
-        entity.Desc = dto.Description ?? entity.Desc;
-
-        var entry = _context.Entry(entity);
-
-        var modifiedProps = entry.Properties
-            .Where(p => p.IsModified)
-            .Select(p => new
-            {
-                ColumnName = p.Metadata.Name,
-                OldVal = p.OriginalValue?.ToString() ?? "null",
-                NewVal = p.CurrentValue?.ToString() ?? "null"
-            })
-            .ToList();
-
-        if (modifiedProps.Any())
-        {
-            var tableName = _context.Model
-                .FindEntityType(typeof(Project))?
-                .GetTableName() ?? nameof(Project);
-
-            var logId = await _logService.Log("Edit", tableName, entity.ProjectId);
-
-            foreach (var change in modifiedProps)
-                await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
-        }
-
-        await _context.SaveChangesAsync();
-
-        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Edit Succeeded"));
-    }
-
+    [Authorize]
     [HttpPut("edit/date")]
     public async Task<IActionResult> EditDate([FromBody] EditAllDate dto)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDateProject");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.Projects
             .FirstOrDefaultAsync(e => e.ProjectId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Project Not Found");
@@ -315,9 +364,17 @@ public class ProjectController : ControllerBase
         return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Edit Date Succeeded"));
     }
 
+    [Authorize]
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteProject");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.Projects
             .FirstOrDefaultAsync(e => e.ProjectId == id && !e.IsDeleted);
 

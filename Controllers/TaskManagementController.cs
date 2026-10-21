@@ -1,4 +1,6 @@
 using System.Linq.Expressions;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Test26.ApiR;
@@ -73,9 +75,17 @@ public class TaskManagementController : ControllerBase
         return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Get By ID Succeeded"));
     }
 
+    [Authorize]
     [HttpPatch("edit/status")]
     public async Task<IActionResult> Status([FromBody] TaskEditObject dto)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditStatusTaskManagement");
+
+        //////////////////////////////////////////////////////
+        
         var exist = await _context.Statuses
             .AnyAsync(e => e.StatusId == dto.ObjectId && !e.IsDeleted);
 
@@ -109,9 +119,17 @@ public class TaskManagementController : ControllerBase
         return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Status Succeeded"));
     }
 
+    [Authorize]
     [HttpPatch("edit/priority")]
     public async Task<IActionResult> Priority([FromBody] TaskEditObject dto)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditPriorityTaskManagement");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.TaskManagements
             .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Task Not Found");
@@ -138,9 +156,17 @@ public class TaskManagementController : ControllerBase
         return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Priority Succeeded"));
     }
 
+    [Authorize]
     [HttpPatch("edit/parent")]
     public async Task<IActionResult> Parent([FromBody] TMEPDto dto)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditParentTaskManagement");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.TaskManagements
             .FirstOrDefaultAsync(t => t.TaskManagementId == dto.TaskID)
             ?? throw new KeyNotFoundException("Task Not Found");
@@ -201,9 +227,17 @@ public class TaskManagementController : ControllerBase
         return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Parent Succeeded"));
     }
 
+    [Authorize]
     [HttpPatch("edit/title")]
     public async Task<IActionResult> Title([FromBody] EditString editString)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditTitleTaskManagement");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.TaskManagements
             .FindAsync(editString.TaskID);
 
@@ -239,9 +273,17 @@ public class TaskManagementController : ControllerBase
         return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Title Succeeded"));
     }
 
+    [Authorize]
     [HttpPatch("edit/desc")]
     public async Task<IActionResult> Desc([FromBody] EditString editString)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDescTaskManagement");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.TaskManagements
             .FindAsync(editString.TaskID);
 
@@ -264,9 +306,17 @@ public class TaskManagementController : ControllerBase
         return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Desc Succeeded"));
     }
 
+    [Authorize]
     [HttpPut("edit/date")]
     public async Task<IActionResult> EditDate([FromBody] EditDates editDate)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDateTaskManagement");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.TaskManagements
             .FindAsync(editDate.ID);
 
@@ -359,9 +409,16 @@ public class TaskManagementController : ControllerBase
         return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Date Succeeded"));
     }
 
+    [Authorize]
     [HttpPost("add")]
     public async Task<IActionResult> Add([FromBody] TMDtoAdd dto)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddTaskManagement");
+
+        ////////////////////////////////////////////////////// 
 
         var exist = await _context.TaskManagements
             .AnyAsync(e => e.Title == dto.Title && e.ProjectId == dto.ProjectId && e.ParentId == dto.ParentId && !e.IsDeleted);
@@ -453,7 +510,7 @@ public class TaskManagementController : ControllerBase
             CompletionDate = dto.EndDate
         };
 
-            _context.TaskManagements.Add(newTask);
+            await _context.TaskManagements.AddAsync(newTask);
 
             var logId = await _logService.Log("Create",nameof(TaskManagement), taskId);
 
@@ -480,16 +537,21 @@ public class TaskManagementController : ControllerBase
                 .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Task Not Found");
 
-            entity.StatusId = dto.StatusId;
-            entity.PriorityId = dto.PriorityId;
-            entity.ParentId = dto.ParentId;
+            if (dto.Nullable)
+            {
+                entity.StatusId = dto.StatusId;
+                entity.PriorityId = dto.PriorityId;
+                entity.ParentId = dto.ParentId;
 
-            entity.Desc = dto.Desc;
-            entity.CreationDate = dto.CreationDate;
-            entity.CompletionDate = dto.EndDate;
+                entity.Desc = dto.Desc;
+                entity.CreationDate = dto.CreationDate;
+                entity.CompletionDate = dto.EndDate;
 
-            entity.DueDate = dto.DueDate;
-            entity.StartDate = dto.StartDate;
+                entity.DueDate = dto.DueDate;
+                entity.StartDate = dto.StartDate;
+            }
+
+            
 
             if (dto.ParentId.HasValue)
             {
@@ -589,16 +651,24 @@ public class TaskManagementController : ControllerBase
             }
         }
 
-        await _context.SaveChangesAsync();
-
         var newEntity = TaskToDto(entity);
+
+        await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<TaskManagementDto>.Success(newEntity,$"Succeeded"));
     }
 
+    [Authorize]
     [HttpDelete("delete/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteTaskManagement");
+
+        //////////////////////////////////////////////////////
+        
         var entity = await _context.TaskManagements
             .Include(e => e.Project)
             .Include(e => e.Status)
