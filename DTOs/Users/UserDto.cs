@@ -2,9 +2,6 @@ using Test26.Models;
 
 namespace Test26.DTOs;
 
-
-
-
 public class UserDto
 {
     public Guid UserId { get; set; }
