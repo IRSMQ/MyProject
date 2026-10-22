@@ -30,6 +30,7 @@ public class UserProjectController : ControllerBase
             .AsNoTracking()
             .Include(e => e.User)
             .Include(e => e.Project)
+            .Where(e => !e.IsDeleted)
             .Select(e => new UserProjectDto
             {
                 UserProjectId = e.UserProjectId,
@@ -53,6 +54,7 @@ public class UserProjectController : ControllerBase
             .AsNoTracking()
             .Include(e => e.User)
             .Include(e => e.Project)
+            .Where(e => !e.IsDeleted)
             .Select(e => new UserProjectDto
             {
                 UserId = e.UserId,

@@ -65,10 +65,15 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization(options =>
+
+builder.Services.AddCors(options =>
 {
-    options.AddPolicy("ManagerOnly", policy => 
-        policy.RequireRole("Manager"));
+    options.AddPolicy("AllowClient", policy =>
+    {
+        policy.WithOrigins()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
 });
 
 builder.Services.AddHttpContextAccessor();
@@ -89,23 +94,9 @@ if (app.Environment.IsDevelopment())
 }
 
 
-// if (app.Environment.IsDevelopment())
-// {
-//     app.MapOpenApi();
-
-//     app.MapScalarApiReference(options =>
-//     {
-//         options.AddPreferredSecuritySchemes("Bearer");
-//         options.AddHttpAuthentication("Bearer", auth =>
-//         {
-//             auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIyYTEyZDMwZC04OWFmLTQ4ZDQtOWE4ZC0xMmI0YTMyYzE0ZjIiLCJyb2xlIjoiNjg2OWRlZmUtNTZjMy00OTBhLWJhYjItMGVhOTJlYzk3YmNhIiwidW5pcXVlX25hbWUiOiJNYW5hZ2VyIiwibmJmIjoxNzkyNDAyNTI2LCJleHAiOjE3OTI0MDk3MjYsImlhdCI6MTc5MjQwMjUyNiwiaXNzIjoiTXlBcGkiLCJhdWQiOiJNeUFwaVVzZXJzIn0.TSpXGP2SvRCf63y01JjhrtEP4OuoEPSKOkFb8MrM-dw";
-//         });
-//     });
-// }
-
-
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseRouting();
+app.UseCors("AllowClient");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

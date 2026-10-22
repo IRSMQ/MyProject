@@ -31,6 +31,7 @@ public class TaskUserController : ControllerBase
             .AsNoTracking()
             .Include(e => e.User)
             .Include(e => e.Task)
+            .Where(e => !e.IsDeleted)
             .Select(e => new TaskUserDto
             {
                 TaskId = e.TaskId,
@@ -53,6 +54,7 @@ public class TaskUserController : ControllerBase
             .AsNoTracking()
             .Include(e => e.User)
             .Include(e => e.Task)
+            .Where(e => !e.IsDeleted)
             .Select(e => new TaskUserDto
             {
                 TaskId = e.TaskId,

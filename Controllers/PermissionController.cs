@@ -26,11 +26,11 @@ public class PermissionController : ControllerBase
     {
         var entity = await _context.Permissions
             .AsNoTracking()
-            .Where(p => !p.IsDeleted)
-            .Select(p => new PermissionDto
+            .Where(e => !e.IsDeleted)
+            .Select(e => new PermissionDto
             {
-                PermissionId = p.PermissionId,
-                PermissionName = p.PermissionName,
+                PermissionId = e.PermissionId,
+                PermissionName = e.PermissionName,
             })
             .ToListAsync();
 
@@ -42,11 +42,11 @@ public class PermissionController : ControllerBase
     {
         var entity = await _context.Permissions
             .AsNoTracking()
-            .Where(p => p.PermissionId == id && !p.IsDeleted)
-            .Select(p => new PermissionDto
+            .Where(e => e.PermissionId == id && !e.IsDeleted)
+            .Select(e => new PermissionDto
             {
-                PermissionId = p.PermissionId,
-                PermissionName = p.PermissionName,
+                PermissionId = e.PermissionId,
+                PermissionName = e.PermissionName,
             })
             .FirstOrDefaultAsync();
 

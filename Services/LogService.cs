@@ -20,9 +20,13 @@ public class LogService
     public async Task<Guid> Log(string logTypeName, string tableName, Guid relatedId)
     {
         
-        // var userIdClaim = _httpContextAccessor.HttpContext?.User
-        //     .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userIdClaim = _httpContextAccessor.HttpContext?.User
+            .FindFirstValue(ClaimTypes.NameIdentifier);
         
+        Guid? userId = null;
+
+        if (userIdClaim != null)
+            userId = Guid.Parse(userIdClaim);
         
         var logId = Guid.NewGuid();
         var newLog = new Log
@@ -31,7 +35,7 @@ public class LogService
             LogType = logTypeName,
             RelatedTableName = tableName,
             RelatedId = relatedId,
-            //UserId = userIdClaim,
+            UserId = userId,
             Date = DateTime.Now
         };
 
@@ -55,23 +59,26 @@ public class LogService
     public async Task<bool> CheckToken(Guid tokenUserId, Guid? tokenRoleId, string PermissionTableName){
 
         if (string.IsNullOrEmpty(tokenRoleId.ToString()))
-            throw new InvalidOperationException("Token Is Null");
+            throw new InvalidOperationException("Token Role Is Null");
 
         var entityRole = await _context.Roles
-            .FirstOrDefaultAsync(e => e.RoleId == tokenRoleId);
+            .FirstOrDefaultAsync(e => e.RoleId == tokenRoleId)
+            ?? throw new KeyNotFoundException("Role Not Found");
 
         if (entityRole.RoleName != "Manager")
         {
             var entityRolePermission = await _context.RolePermissions
+                .Include(e => e.Permission)
                 .Where(e => e.RoleId == tokenRoleId && !e.IsDeleted)
                 .ToListAsync();
 
             var entityUserPermission = await _context.UserPermissions
+                .Include(e => e.Permission)
                 .Where(e => e.UserId == tokenUserId && !e.IsDeleted)
                 .ToListAsync();
 
             bool check1 = false;
-            bool check2 = true;
+            string check2 = "null";
 
             if (entityRolePermission.Count > 0)
             {
@@ -86,15 +93,22 @@ public class LogService
             {
                 foreach (var e in entityUserPermission)
                 {
-                    if (e.Permission.PermissionName == "DeleteUserProject" && e.Bit == false)
-                        check2 = false;
+                    if (e.Permission.PermissionName == PermissionTableName)
+                    {
+                        check2 = e.Bit.ToString();
+                    }
                 }
             }
 
-            if (!check1 && !check2)
-                throw new InvalidOperationException("This user does not have this level of access");
+            if (check2 == "null")
+                if (check1)
+                    return true;
+                else throw new InvalidOperationException("This user does not have this level of access");
+
             else
-                return true;
+                if (check2 == "true")
+                    return true;
+                else throw new InvalidOperationException("This user does not have this level of access");
         }
         else
         {

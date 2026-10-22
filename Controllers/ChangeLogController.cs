@@ -7,6 +7,7 @@ using Test26.Service;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Test26.DTOs;
 
 namespace Test26.Controller;
 
@@ -24,17 +25,25 @@ public class ChangeLogController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("all/{n}")]
+    [HttpGet("top/{n}")]
     public async Task<IActionResult> GetNTop(int n)
     {
         var entity = await _context.ChangeLogs
             .AsNoTracking()
             .Where(e => !e.IsDeleted)
             .Take(n)
+            .Select(e => new ChangeLogDto
+            {
+                changeLogId = e.ChangeLogId,
+                logId = e.LogId,
+                columnName = e.ColumnName,
+                oldValue = e.OldValue,
+                newValue = e.NewValue
+            })
             .ToListAsync()
             ?? throw new InvalidOperationException("Change Log Empity");
 
-        return Ok(ApiResponse<List<ChangeLog>>.Success(entity,$"Get N Top Succeeded"));
+        return Ok(ApiResponse<List<ChangeLogDto>>.Success(entity, $"Get N Top Succeeded"));
     }
 
     [HttpGet("logid/{id}")]
@@ -42,13 +51,21 @@ public class ChangeLogController : ControllerBase
     {
         var entity = await _context.ChangeLogs
             .AsNoTracking()
-            .Where(e => !e.IsDeleted && e.LogId == id)
+            .Where(e => e.LogId == id && !e.IsDeleted)
+            .Select(e => new ChangeLogDto
+            {
+                changeLogId = e.ChangeLogId,
+                logId = e.LogId,
+                columnName = e.ColumnName,
+                oldValue = e.OldValue,
+                newValue = e.NewValue
+            })
             .ToListAsync();
 
         if (entity.Count == 0)
             throw new KeyNotFoundException("There are no Change Log with this ID");
 
-        return Ok(ApiResponse<List<ChangeLog>>.Success(entity,$"Get By Log ID Succeeded"));
+        return Ok(ApiResponse<List<ChangeLogDto>>.Success(entity, $"Get By Log ID Succeeded"));
     }
 
     [HttpGet("id/{id}")]
@@ -59,7 +76,16 @@ public class ChangeLogController : ControllerBase
             .FirstOrDefaultAsync(e => e.ChangeLogId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("There are no Change Log with this ID");
 
-        return Ok(ApiResponse<ChangeLog>.Success(entity,$"Get By ID Succeeded"));
+        var newEntity = new ChangeLogDto
+        {
+            changeLogId = entity.ChangeLogId,
+            logId = entity.LogId,
+            columnName = entity.ColumnName,
+            oldValue = entity.OldValue,
+            newValue = entity.NewValue
+        };
+
+        return Ok(ApiResponse<ChangeLogDto>.Success(newEntity, $"Get By ID Succeeded"));
     }
 
     [Authorize]
@@ -80,9 +106,18 @@ public class ChangeLogController : ControllerBase
         entity.IsDeleted = true;
 
         await _logService.Log("Delete", nameof(ChangeLog), id);
+
+        var newEntity = new ChangeLogDto
+        {
+            changeLogId = entity.ChangeLogId,
+            logId = entity.LogId,
+            columnName = entity.ColumnName,
+            oldValue = entity.OldValue,
+            newValue = entity.NewValue
+        };
         
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<ChangeLog>.Success(entity,$"Delete Succeeded"));
+        return Ok(ApiResponse<ChangeLogDto>.Success(newEntity, $"Delete Succeeded"));
     }
 }

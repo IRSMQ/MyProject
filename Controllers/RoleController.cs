@@ -28,11 +28,11 @@ public class RoleController : ControllerBase
     {
         var entity = await _context.Roles
             .AsNoTracking()
-            .Where(p => !p.IsDeleted)
-            .Select(p => new RoleDto
+            .Where(e => !e.IsDeleted)
+            .Select(e => new RoleDto
             {
-                RoleId = p.RoleId,
-                RoleName = p.RoleName,
+                RoleId = e.RoleId,
+                RoleName = e.RoleName,
             })
             .ToListAsync();
 
@@ -44,11 +44,11 @@ public class RoleController : ControllerBase
     {
         var entity = await _context.Roles
             .AsNoTracking()
-            .Where(p => p.RoleId == id && !p.IsDeleted)
-            .Select(p => new RoleDto
+            .Where(e => e.RoleId == id && !e.IsDeleted)
+            .Select(e => new RoleDto
             {
-                RoleId = p.RoleId,
-                RoleName = p.RoleName
+                RoleId = e.RoleId,
+                RoleName = e.RoleName
             })
             .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Role with ID {id} not found.");
@@ -202,6 +202,6 @@ public class RoleController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<RoleDto>.Success(newRole,$""));
+        return Ok(ApiResponse<RoleDto>.Success(newRole, $"Delete Succeeded"));
     }
 }

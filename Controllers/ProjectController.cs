@@ -379,7 +379,7 @@ public class ProjectController : ControllerBase
             .FirstOrDefaultAsync(e => e.ProjectId == id && !e.IsDeleted);
 
         if (entity == null)
-            throw new KeyNotFoundException($"Project with ID {id} not found.");
+            throw new KeyNotFoundException($"Project Not Found");
 
         entity.IsDeleted = true;
 

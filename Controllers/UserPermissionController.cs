@@ -30,6 +30,7 @@ public class UserPermissionController : ControllerBase
             .AsNoTracking()
             .Include(e => e.User)
             .Include(e => e.Permission)
+            .Where(e => !e.IsDeleted)
             .Select(e => new UserPermissionDto
             {
                 UserId = e.UserId,
@@ -52,6 +53,7 @@ public class UserPermissionController : ControllerBase
             .AsNoTracking()
             .Include(e => e.User)
             .Include(e => e.Permission)
+            .Where(e => !e.IsDeleted)
             .Select(e => new UserPermissionDto
             {
                 UserId = e.UserId,
@@ -69,7 +71,6 @@ public class UserPermissionController : ControllerBase
     [HttpPost("add")]
     public async Task<IActionResult> Add(UserPermissionDtoAdd dto)
     {
-
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
         var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
 

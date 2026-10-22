@@ -28,7 +28,7 @@ public class RolePermissionController : ControllerBase
     {
         var entity = await _context.RolePermissions
             .AsNoTracking()
-            .Where(e => e.IsDeleted == false)
+            .Where(e => !e.IsDeleted)
             .Select(e => new RPDto
             {
                 Rpid = e.RolePermissionId,
@@ -42,7 +42,7 @@ public class RolePermissionController : ControllerBase
         if (entity.Count == 0)
             throw new InvalidOperationException("There are no RolePermissions");
 
-        return Ok(ApiResponse<List<RPDto>>.Success(entity,$"Get All Succeeded"));
+        return Ok(ApiResponse<List<RPDto>>.Success(entity, $"Get All Succeeded"));
     }
 
 
@@ -51,7 +51,7 @@ public class RolePermissionController : ControllerBase
     {
         var entity = await _context.RolePermissions
             .AsNoTracking()
-            .Where(e => e.RoleId == id && e.IsDeleted == false)
+            .Where(e => e.RoleId == id && !e.IsDeleted)
             .Select(e => new RPDto
             {
                 Rpid = e.RolePermissionId,
@@ -65,7 +65,7 @@ public class RolePermissionController : ControllerBase
         if (entity.Count == 0)
             throw new KeyNotFoundException($"RolePermission With ID: {id} Not Exist");
 
-        return Ok(ApiResponse<List<RPDto>>.Success(entity,$"Succeeded"));
+        return Ok(ApiResponse<List<RPDto>>.Success(entity, $"Succeeded"));
     }
 
 
@@ -74,7 +74,7 @@ public class RolePermissionController : ControllerBase
     {
         var entity = await _context.RolePermissions
             .AsNoTracking()
-            .Where(e => e.PermissionId == id && e.IsDeleted == false)
+            .Where(e => e.PermissionId == id && !e.IsDeleted)
             .Select(e => new RPDto
             {
                 Rpid = e.RolePermissionId,
@@ -88,7 +88,7 @@ public class RolePermissionController : ControllerBase
         if (entity.Count == 0)
             throw new KeyNotFoundException($"RolePermission Not Exist");
 
-        return Ok(ApiResponse<List<RPDto>>.Success(entity,$"Succeeded"));
+        return Ok(ApiResponse<List<RPDto>>.Success(entity, $"Succeeded"));
     }
 
     [Authorize]
@@ -208,7 +208,7 @@ public class RolePermissionController : ControllerBase
 
 
     [Authorize]
-    [HttpDelete("delete")]
+    [HttpDelete("delete/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
