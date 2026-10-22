@@ -27,6 +27,7 @@ public class LogService
 
         if (userIdClaim != null)
             userId = Guid.Parse(userIdClaim);
+            
         
         var logId = Guid.NewGuid();
         var newLog = new Log
