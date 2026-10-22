@@ -72,8 +72,8 @@ public class LogController : ControllerBase
     [HttpDelete("id/{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteLog");
 

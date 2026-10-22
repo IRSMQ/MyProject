@@ -60,8 +60,8 @@ public class StatusController : ControllerBase
     [HttpPost("add")]
     public async Task<ActionResult<StatusDto>> Add([FromBody] StatusAddDto dto)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "AddStatus");
 
@@ -146,8 +146,8 @@ public class StatusController : ControllerBase
     [HttpDelete("delete/{id:guid}")]
     public async Task<ActionResult<StatusDto>> Delete(Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteStatus");
 

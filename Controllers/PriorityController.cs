@@ -58,8 +58,8 @@ public class PriorityController : ControllerBase
     [HttpPost("add")]
     public async Task<IActionResult> Add([FromBody] PriorityAddDto dto)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "AddPriority");
 
@@ -129,8 +129,8 @@ public class PriorityController : ControllerBase
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "DeletePtiotity");
 

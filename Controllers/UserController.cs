@@ -80,8 +80,8 @@ public class UserController : ControllerBase
 
         if (dto.UserId.HasValue)
         {
-            var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+            var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
+            var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
 
             await _logService.CheckToken(tokenUserId,tokenRoleId, "EditUser");
 
@@ -218,8 +218,8 @@ public class UserController : ControllerBase
     [HttpPatch("edit/status")]
     public async Task<IActionResult> EditStatus([FromBody] UserEditStatus dto)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "EditStatusUser");
 
@@ -252,8 +252,8 @@ public class UserController : ControllerBase
     [HttpDelete("delete/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role));
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
+        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
 
         var checkToken =await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteUser");
 
