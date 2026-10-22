@@ -99,7 +99,7 @@ public class ProjectController : ControllerBase
             .FirstOrDefaultAsync(e => e.ProjectName == dto.ProjectName && !e.IsDeleted);
 
         if (entity != null)
-            throw new InvalidOperationException("Project already exists.");        
+            throw new ArgumentException("Project already exists.");        
 
         if (dto.ProjectId.HasValue)
         {
@@ -119,7 +119,7 @@ public class ProjectController : ControllerBase
                     ?? throw new KeyNotFoundException("Manager Not Found");
 
                 if (entityUser.RoleId != Guid.Parse("6869DEFE-56C3-490A-BAB2-0EA92EC97BCA"))
-                    throw new InvalidOperationException("The role must be Manager");
+                    throw new ArgumentException("The role must be Manager");
 
                 entity.ManagerId = dto.ManagerId.Value;
             }
@@ -146,7 +146,7 @@ public class ProjectController : ControllerBase
             {
                 var existsProject = await _context.Projects
                     .FirstOrDefaultAsync(e => e.ProjectName == dto.ProjectName && e.ProjectId != entity.ProjectId && !e.IsDeleted)
-                    ?? throw new InvalidOperationException("Project Name Exist");
+                    ?? throw new ArgumentException("Project Name Exist");
 
                 entity.ProjectName = dto.ProjectName;
             }
@@ -183,14 +183,14 @@ public class ProjectController : ControllerBase
                     ?? throw new KeyNotFoundException("User Not Found");
 
                 if (entityUser.Role.RoleName != "Manager")
-                    throw new InvalidOperationException("Role Is Not Manager");
+                    throw new ArgumentException("Role Is Not Manager");
             }
 
             if (dto.StartDate.HasValue && dto.CreationDate.HasValue)
             {
                 if (dto.StartDate < dto.CreationDate)
                 {
-                    throw new InvalidOperationException("Start Date < Creation Date");
+                    throw new ArgumentException("Start Date < Creation Date");
                 }
             }
 
@@ -198,7 +198,7 @@ public class ProjectController : ControllerBase
             {
                 if (dto.EndDate < dto.StartDate)
                 {
-                    throw new InvalidOperationException("End Date < Start Date");
+                    throw new ArgumentException("End Date < Start Date");
                 }
             }
 
@@ -206,7 +206,7 @@ public class ProjectController : ControllerBase
             {
                 if (dto.DueDate > dto.EndDate)
                 {
-                    throw new InvalidOperationException("Due Date > End Date");
+                    throw new ArgumentException("Due Date > End Date");
                 }
             }
 
@@ -214,7 +214,7 @@ public class ProjectController : ControllerBase
             {
                 if (dto.DueDate < dto.StartDate)
                 {
-                    throw new InvalidOperationException("Due Date < Start Date");
+                    throw new ArgumentException("Due Date < Start Date");
                 }
             }
 
@@ -291,12 +291,12 @@ public class ProjectController : ControllerBase
         if (dto.CreationDate.HasValue)
         {
             if (dto.CreationDate > entity.StartDate || dto.CreationDate > entity.EndDate)
-                throw new InvalidOperationException("End/Start Date < Create Date");
+                throw new ArgumentException("End/Start Date < Create Date");
 
             foreach (var e in entityTaskManagement)
             {
                 if (e.CreationDate < dto.CreationDate)
-                    throw new InvalidOperationException("TM Creation Date < Project Creation Date");
+                    throw new ArgumentException("TM Creation Date < Project Creation Date");
             }
             entity.CreationDate = dto.CreationDate;
         }
@@ -304,12 +304,12 @@ public class ProjectController : ControllerBase
         if (dto.StartDate.HasValue)
         {
             if (dto.StartDate > entity.EndDate || dto.StartDate < entity.CreationDate)
-                throw new InvalidOperationException("Start Date > End Date or Start Date < Creation Date");
+                throw new ArgumentException("Start Date > End Date or Start Date < Creation Date");
 
             foreach (var e in entityTaskManagement)
             {
                 if (dto.StartDate > e.StartDate)
-                    throw new InvalidOperationException("Start Date Project > Start Date Task");
+                    throw new ArgumentException("Start Date Project > Start Date Task");
             }
 
             entity.StartDate = dto.StartDate;
@@ -318,7 +318,7 @@ public class ProjectController : ControllerBase
         if (dto.DueDate.HasValue)
         {
             if (dto.DueDate > entity.EndDate || dto.DueDate < entity.CreationDate)
-                throw new InvalidOperationException("Due Date > End Date or Due Date < Creation Date");
+                throw new ArgumentException("Due Date > End Date or Due Date < Creation Date");
 
             entity.DueDate = dto.DueDate;
         }
@@ -326,11 +326,11 @@ public class ProjectController : ControllerBase
         if (dto.EndDate.HasValue)
         {
             if (dto.EndDate < entity.CreationDate || dto.EndDate < entity.StartDate)
-                throw new InvalidOperationException("End Date < Creation Date or End Date < Start Date");
+                throw new ArgumentException("End Date < Creation Date or End Date < Start Date");
 
             foreach (var e in entityTaskManagement)
                 if (e.CompletionDate > dto.EndDate)
-                    throw new InvalidOperationException("Task Completion Date > Project Completion Date");
+                    throw new ArgumentException("Task Completion Date > Project Completion Date");
 
             entity.EndDate = dto.EndDate;
         }

@@ -69,7 +69,7 @@ public class PriorityController : ControllerBase
             .FirstOrDefaultAsync(e => e.PriorityName == dto.PriorityName && !e.IsDeleted);
 
         if (entity != null)
-            throw new InvalidOperationException("Priority already exists.");
+            throw new ArgumentException("Priority already exists.");
 
         string text;
 

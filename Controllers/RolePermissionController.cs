@@ -40,7 +40,7 @@ public class RolePermissionController : ControllerBase
             .ToListAsync();
 
         if (entity.Count == 0)
-            throw new InvalidOperationException("There are no RolePermissions");
+            throw new ArgumentException("There are no RolePermissions");
 
         return Ok(ApiResponse<List<RPDto>>.Success(entity, $"Get All Succeeded"));
     }
@@ -162,7 +162,7 @@ public class RolePermissionController : ControllerBase
                 .AnyAsync(e => e.RoleId == dto.RoleId && e.PermissionId == dto.PermissionId && e.IsDeleted == false);
 
             if (exists)
-                throw new InvalidOperationException($"This Permission is available for this Role");
+                throw new ArgumentException($"This Permission is available for this Role");
 
             var newRp = new RolePermission
             {

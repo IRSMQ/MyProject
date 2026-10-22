@@ -83,7 +83,7 @@ public class TaskUserController : ControllerBase
             .FirstOrDefaultAsync(e => e.TaskId == dto.TaskId && e.UserId == dto.UserId && !e.IsDeleted);
 
         if (entity != null)
-            throw new InvalidOperationException("Task User Exist");
+            throw new ArgumentException("Task User Exist");
 
         var entityTaskManagements = await _context.TaskManagements
             .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskId && !e.IsDeleted)

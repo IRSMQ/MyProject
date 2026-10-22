@@ -56,7 +56,7 @@ public class TaskManagementController : ControllerBase
             .ToListAsync();
 
         if (entity.Count == 0)
-            throw new InvalidOperationException("Task Managements Empity");
+            throw new ArgumentException("Task Managements Empity");
 
         return Ok(ApiResponse<List<TaskManagementDto>>.Success(entity,$"Get All Succeeded"));
     }
@@ -101,7 +101,7 @@ public class TaskManagementController : ControllerBase
             ?? throw new KeyNotFoundException("Task Not Found");
 
         if (entity.Project != null && entity.Project.StatusId != null && entity.Project.StatusId == Guid.Parse("DB303C22-BB2F-438A-BDE0-401CFCA15B5C") && dto.ObjectId == Guid.Parse("8569E5B3-46BD-4070-BCC2-18AB1DC94F26"))
-            throw new InvalidOperationException("When Project Complete, can't edit Task Status into InProgress");
+            throw new ArgumentException("When Project Complete, can't edit Task Status into InProgress");
 
         var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
 
@@ -174,7 +174,7 @@ public class TaskManagementController : ControllerBase
         if (dto.ObjectId != null)
         {
             if (dto.TaskID == dto.ObjectId)
-                throw new InvalidOperationException("Task cannot be its own Parent");
+                throw new ArgumentException("Task cannot be its own Parent");
 
             var exist = await _context.TaskManagements
                 .AnyAsync(e => e.TaskManagementId == dto.ObjectId);
@@ -186,7 +186,7 @@ public class TaskManagementController : ControllerBase
                 .FirstOrDefaultAsync(e => e.TaskManagementId == dto.ObjectId);
 
             if (ptm == null || entity.ProjectId != ptm.ProjectId)
-                throw new InvalidOperationException("The Projects are not coordinated");
+                throw new ArgumentException("The Projects are not coordinated");
 
             var curentId = dto.ObjectId;
             var visited = new HashSet<Guid> { dto.TaskID };
@@ -194,7 +194,7 @@ public class TaskManagementController : ControllerBase
             while (curentId != null)
             {
                 if (!visited.Add(curentId.Value))
-                    throw new InvalidOperationException("Circular reference detected");
+                    throw new ArgumentException("Circular reference detected");
 
                 var parent = await _context.TaskManagements
                     .Where(t => t.TaskManagementId == curentId.Value)
@@ -205,7 +205,7 @@ public class TaskManagementController : ControllerBase
                     break;
 
                 if (parent == dto.TaskID)
-                    throw new InvalidOperationException("Circular reference");
+                    throw new ArgumentException("Circular reference");
 
                 curentId = parent;
             }
@@ -245,7 +245,7 @@ public class TaskManagementController : ControllerBase
             throw new KeyNotFoundException("Task Not Found");
 
         if (editString.Text == null)
-            throw new InvalidOperationException("Title is Null");
+            throw new ArgumentException("Title is Null");
 
         var tm2 = await _context.TaskManagements
             .Where(t => t.ProjectId == entity.ProjectId && t.ParentId == entity.ParentId)
@@ -254,7 +254,7 @@ public class TaskManagementController : ControllerBase
         foreach (var t in tm2)
         {
             if (t.Title == editString.Text)
-                throw new InvalidOperationException("This name is a duplicate within this project and task");
+                throw new ArgumentException("This name is a duplicate within this project and task");
         }
 
         var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
@@ -326,7 +326,7 @@ public class TaskManagementController : ControllerBase
         if (editDate.CreateDate.HasValue)
         {
             if (entity.StartDate < editDate.CreateDate || entity.DueDate < editDate.CreateDate || entity.CompletionDate < editDate.CreateDate)
-                throw new InvalidOperationException("Creation/Start/Due Date > Date");
+                throw new ArgumentException("Creation/Start/Due Date > Date");
 
             var pr = await _context.Projects
                 .FindAsync(entity.ProjectId);
@@ -335,7 +335,7 @@ public class TaskManagementController : ControllerBase
                 throw new KeyNotFoundException("Project Not Found");
 
             if (pr.CreationDate > editDate.CreateDate)
-                throw new InvalidOperationException("Project Creation Date > Task Creation Date");
+                throw new ArgumentException("Project Creation Date > Task Creation Date");
 
             entity.CreationDate = editDate.CreateDate.Value;
         }
@@ -343,14 +343,14 @@ public class TaskManagementController : ControllerBase
         if (editDate.StartDate.HasValue)
         {
             if (entity.DueDate < editDate.StartDate || entity.CompletionDate < editDate.StartDate || entity.CreationDate > editDate.StartDate)
-                throw new InvalidOperationException("Completion/Due Date < Start Date or Creation Date > Start Date");
+                throw new ArgumentException("Completion/Due Date < Start Date or Creation Date > Start Date");
 
             var pr = await _context.Projects
                 .FindAsync(entity.ProjectId)
                 ?? throw new KeyNotFoundException("No Project was found for this Task");
 
             if (pr.StartDate > editDate.StartDate)
-                throw new InvalidOperationException("Start Date Project > Start Date Task");
+                throw new ArgumentException("Start Date Project > Start Date Task");
 
             entity.StartDate = editDate.StartDate.Value;
         }
@@ -358,7 +358,7 @@ public class TaskManagementController : ControllerBase
         if (editDate.DueDate.HasValue)
         {
             if (entity.StartDate > editDate.DueDate || entity.CreationDate > editDate.DueDate)
-                throw new InvalidOperationException("Creation/Start Date > Date");
+                throw new ArgumentException("Creation/Start Date > Date");
 
             entity.DueDate = editDate.DueDate.Value;
         }
@@ -366,16 +366,16 @@ public class TaskManagementController : ControllerBase
         if (editDate.EndDate.HasValue)
         {
             if (entity.CreationDate > editDate.EndDate || entity.StartDate > editDate.EndDate)
-                throw new InvalidOperationException("Create/Start Date > End Date");
+                throw new ArgumentException("Create/Start Date > End Date");
 
             var pr = await _context.Projects
                 .FindAsync(entity.ProjectId);
 
             if (pr == null)
-                throw new InvalidOperationException("Project Not Found");
+                throw new ArgumentException("Project Not Found");
 
             if (pr.EndDate < editDate.EndDate)
-                throw new InvalidOperationException("TM Completion Date > Project Completion Date");
+                throw new ArgumentException("TM Completion Date > Project Completion Date");
 
             entity.CompletionDate = editDate.EndDate;
         }
@@ -424,7 +424,7 @@ public class TaskManagementController : ControllerBase
             .AnyAsync(e => e.Title == dto.Title && e.ProjectId == dto.ProjectId && e.ParentId == dto.ParentId && !e.IsDeleted);
 
         if (exist)
-            throw new InvalidOperationException("Task With this Title, Parent, Project Exist");
+            throw new ArgumentException("Task With this Title, Parent, Project Exist");
 
         var entity = new TaskManagement();
         
@@ -448,7 +448,7 @@ public class TaskManagementController : ControllerBase
                         ?? throw new KeyNotFoundException("Project Not Found");
                 }
                 else
-                    throw new InvalidOperationException("The project cannot be empty");
+                    throw new ArgumentException("The project cannot be empty");
             }
 
             if (!dto.CreationDate.HasValue)
@@ -458,27 +458,27 @@ public class TaskManagementController : ControllerBase
             {
                 if (dto.StartDate.HasValue)
                     if (dto.StartDate > dto.EndDate)
-                        throw new InvalidOperationException("Start Date > End Date");
+                        throw new ArgumentException("Start Date > End Date");
 
                 else
-                    throw new InvalidOperationException("End Date Has Value And Start Date Empity");
+                    throw new ArgumentException("End Date Has Value And Start Date Empity");
                 
                 if (dto.CreationDate.HasValue)
                     if (dto.CreationDate > dto.EndDate)
-                        throw new InvalidOperationException("Createion Date > End Date");
+                        throw new ArgumentException("Createion Date > End Date");
 
                 if (dto.DueDate.HasValue)
                     if (dto.DueDate > dto.EndDate)
-                        throw new InvalidOperationException("Due Date > End Date");
+                        throw new ArgumentException("Due Date > End Date");
             }
 
             if (dto.DueDate.HasValue)
                 if (dto.CreationDate > dto.DueDate)
-                    throw new InvalidOperationException("Creation Date > Due Date");
+                    throw new ArgumentException("Creation Date > Due Date");
 
             if (dto.StartDate.HasValue)
                 if (dto.CreationDate > dto.StartDate)
-                    throw new InvalidOperationException("Creation Date > Start Date");
+                    throw new ArgumentException("Creation Date > Start Date");
 
             if (dto.StatusId.HasValue)
             {
@@ -573,7 +573,7 @@ public class TaskManagementController : ControllerBase
                     entity.ProjectId = dto.ProjectId.Value;
                 }
                 else
-                    throw new InvalidOperationException("The project cannot be empty");
+                    throw new ArgumentException("The project cannot be empty");
             }
 
             if (dto.CreationDate.HasValue)
@@ -582,7 +582,7 @@ public class TaskManagementController : ControllerBase
             if (dto.EndDate.HasValue)
             {
                 if (entity.CreationDate > dto.EndDate)
-                    throw new InvalidOperationException("Createion Date > End Date");
+                    throw new ArgumentException("Createion Date > End Date");
 
                 entity.CompletionDate = dto.EndDate;
             }
@@ -590,7 +590,7 @@ public class TaskManagementController : ControllerBase
             if (dto.StartDate.HasValue)
             {
                 if (entity.CreationDate > dto.StartDate || entity.CompletionDate < dto.StartDate)
-                    throw new InvalidOperationException("Creation Date > Start Date or End Date < Start Date");
+                    throw new ArgumentException("Creation Date > Start Date or End Date < Start Date");
 
                 entity.StartDate = dto.StartDate;
             }
@@ -598,7 +598,7 @@ public class TaskManagementController : ControllerBase
             if (dto.DueDate.HasValue)
             {
                 if (entity.CreationDate > dto.DueDate)
-                    throw new InvalidOperationException("Creation Date > Due Date");
+                    throw new ArgumentException("Creation Date > Due Date");
 
                 entity.DueDate = dto.DueDate;
             }
@@ -681,7 +681,7 @@ public class TaskManagementController : ControllerBase
             .AnyAsync(e => e.ParentId == id);
 
         if (exist)
-            throw new InvalidOperationException("This task has a sub-task");
+            throw new ArgumentException("This task has a sub-task");
 
         await _logService.Log("Delete", nameof(TaskManagement), entity.TaskManagementId);
 

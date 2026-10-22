@@ -41,7 +41,7 @@ public class ChangeLogController : ControllerBase
                 newValue = e.NewValue
             })
             .ToListAsync()
-            ?? throw new InvalidOperationException("Change Log Empity");
+            ?? throw new ArgumentException("Change Log Empity");
 
         return Ok(ApiResponse<List<ChangeLogDto>>.Success(entity, $"Get N Top Succeeded"));
     }

@@ -52,7 +52,7 @@ public class UserController : ControllerBase
             .ToListAsync();
 
         if (!users.Any())
-            throw new InvalidOperationException("There are no users");
+            throw new ArgumentException("There are no users");
 
         return Ok(ApiResponse<List<UserDto>>.Success(users, $"Get All Succeeded"));
     }
@@ -74,7 +74,7 @@ public class UserController : ControllerBase
         var entity = await _context.Users
             .FirstOrDefaultAsync(e => e.Username == dto.Username && !e.IsDeleted);
         if (entity != null)
-            throw new InvalidOperationException("Username already exists");
+            throw new ArgumentException("Username already exists");
 
         string text;
 
@@ -151,7 +151,7 @@ public class UserController : ControllerBase
         else
         {
             if (string.IsNullOrEmpty(dto.Username) || string.IsNullOrEmpty(dto.UserFullName) || string.IsNullOrEmpty(dto.UserPassword))
-                throw new InvalidOperationException("Username or User FullName or Password is NULL");
+                throw new ArgumentException("Username or User FullName or Password is NULL");
 
             entity = new User
             {

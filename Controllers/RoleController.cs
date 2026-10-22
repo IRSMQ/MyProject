@@ -71,7 +71,7 @@ public class RoleController : ControllerBase
             .FirstOrDefaultAsync(e => e.RoleName == dto.RoleName && !e.IsDeleted);
 
         if (entity != null)
-            throw new InvalidOperationException("Role already exists");
+            throw new ArgumentException("Role already exists");
 
         string text;
 

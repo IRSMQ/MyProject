@@ -94,7 +94,8 @@ if (app.Environment.IsDevelopment())
 }
 
 
-app.UseMiddleware<ExceptionHandlingMiddleware>();
+// app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.UseRouting();
 app.UseCors("AllowClient");
 app.UseAuthentication();

@@ -42,7 +42,7 @@ public class LogController : ControllerBase
                 Date = e.Date
             })
             .ToListAsync()
-            ?? throw new InvalidOperationException("Change Log Empity");
+            ?? throw new ArgumentException("Change Log Empity");
 
         return Ok(ApiResponse<List<LogDto>>.Success(entity,$"Get N Top Succeeded"));
     }

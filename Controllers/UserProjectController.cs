@@ -84,7 +84,7 @@ public class UserProjectController : ControllerBase
             .FirstOrDefaultAsync(e => e.ProjectId == dto.ProjectId && e.UserId == dto.UserId && !e.IsDeleted);
 
         if (entity != null)
-            throw new InvalidOperationException("User Project Exist");
+            throw new ArgumentException("User Project Exist");
 
         var entityProject = await _context.Projects
             .FirstOrDefaultAsync(e => e.ProjectId == dto.ProjectId && !e.IsDeleted);

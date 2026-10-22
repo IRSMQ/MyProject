@@ -73,7 +73,7 @@ public class PermissionController : ControllerBase
         string text;
 
         if (entity != null)
-            throw new InvalidOperationException("Permission already exists.");
+            throw new ArgumentException("Permission already exists.");
 
         if (dto.PermissionId.HasValue)
         {

@@ -82,7 +82,7 @@ public class UserPermissionController : ControllerBase
             .FirstOrDefaultAsync(e => e.PermissionId == dto.PermissionId && e.UserId == dto.UserId && !e.IsDeleted);
 
         if (entity != null)
-            throw new InvalidOperationException("User Permission Exist");
+            throw new ArgumentException("User Permission Exist");
 
         var entityPermission = await _context.Permissions
             .FirstOrDefaultAsync(e => e.PermissionId == dto.PermissionId && !e.IsDeleted)

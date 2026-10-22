@@ -71,7 +71,7 @@ public class StatusController : ControllerBase
             .FirstOrDefaultAsync(p => p.StatusName == dto.StatusName && !p.IsDeleted);
 
         if (entity != null)
-            throw new InvalidOperationException("Status already exists");
+            throw new ArgumentException("Status already exists");
 
         string text;
 
