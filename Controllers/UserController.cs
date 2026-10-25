@@ -71,6 +71,17 @@ public class UserController : ControllerBase
     [HttpPost("add")]
     public async Task<IActionResult> Add([FromBody] UserAddDto dto)
     {   
+
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
+
         var entity = await _context.Users
             .FirstOrDefaultAsync(e => e.Username == dto.Username && !e.IsDeleted);
         if (entity != null)
@@ -80,9 +91,6 @@ public class UserController : ControllerBase
 
         if (dto.UserId.HasValue)
         {
-            var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-            var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
-
             await _logService.CheckToken(tokenUserId,tokenRoleId, "EditUser");
 
 
@@ -150,6 +158,7 @@ public class UserController : ControllerBase
         }
         else
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddUser");
             if (string.IsNullOrEmpty(dto.Username) || string.IsNullOrEmpty(dto.UserFullName) || string.IsNullOrEmpty(dto.UserPassword))
                 throw new ArgumentException("Username or User FullName or Password is NULL");
 
@@ -219,7 +228,14 @@ public class UserController : ControllerBase
     public async Task<IActionResult> EditStatus([FromBody] UserEditStatus dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "EditStatusUser");
 
@@ -253,9 +269,16 @@ public class UserController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
 
-        var checkToken =await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteUser");
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
+
+        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteUser");
 
         //////////////////////////////////////////////////////
         

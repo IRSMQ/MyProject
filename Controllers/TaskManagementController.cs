@@ -80,7 +80,14 @@ public class TaskManagementController : ControllerBase
     public async Task<IActionResult> Status([FromBody] TaskEditObject dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "EditStatusTaskManagement");
 
@@ -124,7 +131,14 @@ public class TaskManagementController : ControllerBase
     public async Task<IActionResult> Priority([FromBody] TaskEditObject dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "EditPriorityTaskManagement");
 
@@ -161,7 +175,14 @@ public class TaskManagementController : ControllerBase
     public async Task<IActionResult> Parent([FromBody] TMEPDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "EditParentTaskManagement");
 
@@ -232,14 +253,21 @@ public class TaskManagementController : ControllerBase
     public async Task<IActionResult> Title([FromBody] EditString editString)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "EditTitleTaskManagement");
 
         //////////////////////////////////////////////////////
         
         var entity = await _context.TaskManagements
-            .FindAsync(editString.TaskID);
+            .FirstOrDefaultAsync(e => e.TaskManagementId == editString.TaskID && !e.IsDeleted);
 
         if (entity == null)
             throw new KeyNotFoundException("Task Not Found");
@@ -278,14 +306,21 @@ public class TaskManagementController : ControllerBase
     public async Task<IActionResult> Desc([FromBody] EditString editString)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDescTaskManagement");
 
         //////////////////////////////////////////////////////
         
         var entity = await _context.TaskManagements
-            .FindAsync(editString.TaskID);
+            .FirstOrDefaultAsync(e => e.TaskManagementId == editString.TaskID && !e.IsDeleted);
 
         if (entity == null)
             throw new KeyNotFoundException("Task Not Found");
@@ -311,14 +346,21 @@ public class TaskManagementController : ControllerBase
     public async Task<IActionResult> EditDate([FromBody] EditDates editDate)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDateTaskManagement");
 
         //////////////////////////////////////////////////////
         
         var entity = await _context.TaskManagements
-            .FindAsync(editDate.ID);
+            .FirstOrDefaultAsync(e => e.TaskManagementId == editDate.ID && !e.IsDeleted);
 
         if (entity == null)
             throw new KeyNotFoundException("Task Not Found");
@@ -329,7 +371,7 @@ public class TaskManagementController : ControllerBase
                 throw new ArgumentException("Creation/Start/Due Date > Date");
 
             var pr = await _context.Projects
-                .FindAsync(entity.ProjectId);
+                .FirstOrDefaultAsync(e => e.ProjectId == entity.ProjectId && !e.IsDeleted);
 
             if (pr == null)
                 throw new KeyNotFoundException("Project Not Found");
@@ -346,7 +388,7 @@ public class TaskManagementController : ControllerBase
                 throw new ArgumentException("Completion/Due Date < Start Date or Creation Date > Start Date");
 
             var pr = await _context.Projects
-                .FindAsync(entity.ProjectId)
+                .FirstOrDefaultAsync(e => e.ProjectId == entity.ProjectId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("No Project was found for this Task");
 
             if (pr.StartDate > editDate.StartDate)
@@ -369,7 +411,7 @@ public class TaskManagementController : ControllerBase
                 throw new ArgumentException("Create/Start Date > End Date");
 
             var pr = await _context.Projects
-                .FindAsync(entity.ProjectId);
+                .FirstOrDefaultAsync(e => e.ProjectId == entity.ProjectId && !e.IsDeleted);
 
             if (pr == null)
                 throw new ArgumentException("Project Not Found");
@@ -414,9 +456,14 @@ public class TaskManagementController : ControllerBase
     public async Task<IActionResult> Add([FromBody] TMDtoAdd dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddTaskManagement");
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         ////////////////////////////////////////////////////// 
 
@@ -431,6 +478,7 @@ public class TaskManagementController : ControllerBase
 
         if (!dto.TaskId.HasValue)
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddTaskManagement");
             if (dto.ParentId.HasValue)
             {
                 var entityTaskManagement = await _context.TaskManagements
@@ -533,6 +581,7 @@ public class TaskManagementController : ControllerBase
         }
         else
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditTaskManagement");
             entity = await _context.TaskManagements
                 .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Task Not Found");
@@ -663,7 +712,14 @@ public class TaskManagementController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteTaskManagement");
 

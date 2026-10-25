@@ -59,9 +59,14 @@ public class PriorityController : ControllerBase
     public async Task<IActionResult> Add([FromBody] PriorityAddDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddPriority");
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         //////////////////////////////////////////////////////
         
@@ -75,6 +80,7 @@ public class PriorityController : ControllerBase
 
         if (dto.PriorityId.HasValue)
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditPriority");
             entity = await _context.Priorities
                 .FirstOrDefaultAsync(e => e.PriorityId == dto.PriorityId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Priority Not Found");
@@ -100,6 +106,7 @@ public class PriorityController : ControllerBase
         }
         else
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddPriority");
             entity = new Priority
             {
                 PriorityId = Guid.NewGuid(),
@@ -130,7 +137,14 @@ public class PriorityController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "DeletePtiotity");
 

@@ -89,9 +89,14 @@ public class ProjectController : ControllerBase
     public async Task<IActionResult> Add([FromBody] CreateProject dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new ArgumentException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddProject");
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         //////////////////////////////////////////////////////
         
@@ -103,6 +108,7 @@ public class ProjectController : ControllerBase
 
         if (dto.ProjectId.HasValue)
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditProject");
             if (dto.Nullable)
             {
                 entity.ManagerId = dto.ManagerId;
@@ -114,12 +120,10 @@ public class ProjectController : ControllerBase
             if (dto.ManagerId.HasValue)
             {
                 var entityUser = await _context.Users
-                    .Include(e => e.Role)
                     .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
                     ?? throw new KeyNotFoundException("Manager Not Found");
 
-                if (entityUser.RoleId != Guid.Parse("6869DEFE-56C3-490A-BAB2-0EA92EC97BCA"))
-                    throw new ArgumentException("The role must be Manager");
+                await _logService.CheckToken(entityUser.UserId, entityUser.RoleId, "ProjectManager");
 
                 entity.ManagerId = dto.ManagerId.Value;
             }
@@ -175,6 +179,7 @@ public class ProjectController : ControllerBase
         }
         else
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddProject");
             if (dto.ManagerId.HasValue)
             {
                 var entityUser = await _context.Users
@@ -266,7 +271,14 @@ public class ProjectController : ControllerBase
     public async Task<IActionResult> EditDate([FromBody] EditAllDate dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDateProject");
 
@@ -369,7 +381,14 @@ public class ProjectController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new ArgumentException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteProject");
 

@@ -1,7 +1,9 @@
 
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Test26.Context;
+using Test26.Exception;
 using Test26.Models;
 
 namespace Test26.Service;
@@ -27,7 +29,7 @@ public class LogService
 
         if (userIdClaim != null)
             userId = Guid.Parse(userIdClaim);
-            
+
         
         var logId = Guid.NewGuid();
         var newLog = new Log
@@ -60,7 +62,7 @@ public class LogService
     public async Task<bool> CheckToken(Guid tokenUserId, Guid? tokenRoleId, string PermissionTableName){
 
         if (string.IsNullOrEmpty(tokenRoleId.ToString()))
-            throw new InvalidOperationException("Token Role Is Null");
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         var entityRole = await _context.Roles
             .FirstOrDefaultAsync(e => e.RoleId == tokenRoleId)
@@ -104,12 +106,12 @@ public class LogService
             if (check2 == "null")
                 if (check1)
                     return true;
-                else throw new InvalidOperationException("This user does not have this level of access");
+                else throw new ForbiddenException("This user does not have this level of access");
 
             else
                 if (check2 == "true")
                     return true;
-                else throw new InvalidOperationException("This user does not have this level of access");
+                else throw new ForbiddenException("This user does not have this level of access");
         }
         else
         {

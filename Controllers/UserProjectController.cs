@@ -74,9 +74,14 @@ public class UserProjectController : ControllerBase
     {
 
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddUserProject");
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         ///////////////////////////////////////////////////////////////
         
@@ -102,8 +107,9 @@ public class UserProjectController : ControllerBase
 
         if (dto.UserProjectId.HasValue)
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditUserProject");
             entity = await _context.UserProjects
-                .FindAsync(dto.UserProjectId)
+                .FirstOrDefaultAsync(e => e.UserProjectId == dto.UserProjectId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("User Project ID Not Found");
 
             if (entity.UserId == dto.UserId && entity.ProjectId == dto.ProjectId)
@@ -140,11 +146,11 @@ public class UserProjectController : ControllerBase
                 entity.UserId = entity.UserId;
                 text = "Edit Succeeded";
             }
-
         
         }
         else
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddUserProject");
             var newTU = new UserProject
             {
                 UserProjectId = Guid.NewGuid(),
@@ -194,7 +200,14 @@ public class UserProjectController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId, tokenRoleId, "DeleteUserProject");
 

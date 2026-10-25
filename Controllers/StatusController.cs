@@ -61,9 +61,14 @@ public class StatusController : ControllerBase
     public async Task<ActionResult<StatusDto>> Add([FromBody] StatusAddDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddStatus");
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         //////////////////////////////////////////////////////
         
@@ -77,6 +82,7 @@ public class StatusController : ControllerBase
 
         if (dto.StatusId.HasValue)
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditStatus");
             entity = await _context.Statuses
                 .FirstOrDefaultAsync(p => p.StatusId == dto.StatusId && !p.IsDeleted)
                 ?? throw new KeyNotFoundException($"Status Not Found");
@@ -102,6 +108,7 @@ public class StatusController : ControllerBase
         }
         else
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddStatus");
             entity = new Status
             {
                 StatusId = Guid.NewGuid(),
@@ -147,7 +154,14 @@ public class StatusController : ControllerBase
     public async Task<ActionResult<StatusDto>> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteStatus");
 

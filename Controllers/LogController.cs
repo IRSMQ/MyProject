@@ -73,7 +73,14 @@ public class LogController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteLog");
 
@@ -86,6 +93,16 @@ public class LogController : ControllerBase
         entity.IsDeleted = true;
 
         await _logService.Log("Delete", nameof(Log), id);
+
+        var entityChangeLog = await _context.ChangeLogs
+            .Where(e => e.LogId == id && !e.IsDeleted)
+            .ToListAsync();
+
+        foreach (var e in entityChangeLog)
+        {
+            e.IsDeleted = true;
+            await _logService.Log("Delete", nameof(ChangeLog), e.ChangeLogId);
+        }
 
         var newEntity = new LogDto
         {

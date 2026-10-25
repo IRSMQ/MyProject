@@ -96,22 +96,30 @@ public class RolePermissionController : ControllerBase
     public async Task<IActionResult> Add([FromBody] RPDtoAdd dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddRolePermission");
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         //////////////////////////////////////////////////////
         
         var entity = await _context.RolePermissions
             .Include(e => e.Role)
             .Include(e => e.Permission)
-            .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && e.PermissionId == dto.PermissionId && !e.IsDeleted)
-            ?? throw new KeyNotFoundException($"This permission not available for this Role");
+            .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && e.PermissionId == dto.PermissionId && !e.IsDeleted);
+
+            if (entity != null)
+                throw new ArgumentException($"This permission not available for this Role");
 
         string text;
 
         if (dto.RPID.HasValue)
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditRolePermission");
             var entityRole = await _context.Roles
                 .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Role Not Found");
@@ -150,6 +158,7 @@ public class RolePermissionController : ControllerBase
         }
         else
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddRolePermission");
             var RoleEntity = await _context.Roles
                 .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Role Not Found");
@@ -164,29 +173,29 @@ public class RolePermissionController : ControllerBase
             if (exists)
                 throw new ArgumentException($"This Permission is available for this Role");
 
-            var newRp = new RolePermission
+            entity = new RolePermission
             {
                 RolePermissionId = Guid.NewGuid(),
                 RoleId = dto.RoleId,
                 PermissionId = dto.PermissionId
             };
 
-            _context.RolePermissions.Add(newRp);
+            await _context.RolePermissions.AddAsync(entity);
 
-            var logId = await _logService.Log("Create", nameof(RolePermission), newRp.RolePermissionId);
+            var logId = await _logService.Log("Create", nameof(RolePermission), entity.RolePermissionId);
 
             await _logService.ChangLog(
                 logId,
                 "null",
                 dto.RoleId.ToString(),
-                nameof(newRp.RoleId)
+                nameof(entity.RoleId)
             );
 
             await _logService.ChangLog(
                 logId,
                 "null",
                 dto.PermissionId.ToString(),
-                nameof(newRp.PermissionId)
+                nameof(entity.PermissionId)
             );
 
             text = "Add Succeeded";
@@ -203,7 +212,7 @@ public class RolePermissionController : ControllerBase
         
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<RPDto>.Success(newEntityDto,$"{text}"));
+        return Ok(ApiResponse<RPDto>.Success(newEntityDto, $"{text}"));
     }
 
 
@@ -212,7 +221,14 @@ public class RolePermissionController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteRolePermission");
 

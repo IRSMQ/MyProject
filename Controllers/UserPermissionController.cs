@@ -72,9 +72,14 @@ public class UserPermissionController : ControllerBase
     public async Task<IActionResult> Add(UserPermissionDtoAdd dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "AddUserPermission");
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         //////////////////////////////////////////////////////
         
@@ -97,8 +102,9 @@ public class UserPermissionController : ControllerBase
 
         if (dto.UserPermissionId.HasValue)
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditUserPermission");
             entity = await _context.UserPermissions
-                .FindAsync(dto.UserPermissionId)
+                .FirstOrDefaultAsync(e => e.UserPermissionId == dto.UserPermissionId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("User Permission ID Not Found");
 
             if (entity.PermissionId == dto.PermissionId && entity.UserId == dto.UserId)
@@ -136,6 +142,7 @@ public class UserPermissionController : ControllerBase
         }
         else
         {
+            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddUserPermission");
             entity = new UserPermission
             {
                 UserPermissionId = Guid.NewGuid(),
@@ -183,7 +190,14 @@ public class UserPermissionController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleId = Guid.Parse(User.FindFirstValue(ClaimTypes.Role) ?? throw new UnauthorizedAccessException("Token Role Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
 
         await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteUserPermission");
 
@@ -191,7 +205,7 @@ public class UserPermissionController : ControllerBase
 
 
         var entity = await _context.UserPermissions
-            .FindAsync(id)
+            .FirstOrDefaultAsync(e => e.UserPermissionId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User Permission Not Found");
 
         entity.IsDeleted = true;
