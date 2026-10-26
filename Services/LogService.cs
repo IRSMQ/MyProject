@@ -1,9 +1,9 @@
-
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Test26.Context;
-using Test26.Exception;
+// using Test26.Exception;
+
 using Test26.Models;
 
 namespace Test26.Service;
@@ -106,12 +106,12 @@ public class LogService
             if (check2 == "null")
                 if (check1)
                     return true;
-                else throw new ForbiddenException("This user does not have this level of access");
+                else throw new UnauthorizedAccessException("This user does not have this level of access");
 
             else
                 if (check2 == "true")
                     return true;
-                else throw new ForbiddenException("This user does not have this level of access");
+                else throw new UnauthorizedAccessException("This user does not have this level of access");
         }
         else
         {

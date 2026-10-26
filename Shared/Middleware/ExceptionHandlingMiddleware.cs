@@ -1,7 +1,6 @@
 using System.Net;
 using System.Text.Json;
 using Test26.ApiR;
-using Test26.Exception;
 
 namespace AuthLab.Middleware;
 public class ExceptionHandlingMiddleware
@@ -36,7 +35,6 @@ public class ExceptionHandlingMiddleware
             UnauthorizedAccessException => HttpStatusCode.Unauthorized,
             InvalidOperationException => HttpStatusCode.Conflict,
             ArgumentException => HttpStatusCode.BadRequest,
-            ForbiddenException => HttpStatusCode.Forbidden,
             _ => HttpStatusCode.InternalServerError
         };
 
