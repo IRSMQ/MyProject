@@ -251,7 +251,7 @@ public class ProjectController : ControllerBase
             
             foreach (var prop in entry.Properties)
             {
-                if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
+                if (prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
                 {
                     await _logService.ChangLog(
                         logId,

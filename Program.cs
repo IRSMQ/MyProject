@@ -1,10 +1,7 @@
 using Test26.Service;
-using Test26.Models;
-using Test26.Context;
 using Microsoft.EntityFrameworkCore;
 using AuthLab.Middleware;
 using System.IdentityModel.Tokens.Jwt;
-using Microsoft.IdentityModel.Tokens.Experimental;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -13,9 +10,6 @@ using System.Text.Json;
 using Test26.PasswordHassher;
 using Scalar.AspNetCore;
 
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.OpenApi;
-using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
