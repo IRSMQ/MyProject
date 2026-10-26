@@ -51,7 +51,7 @@ public class RoleController : ControllerBase
                 RoleName = e.RoleName
             })
             .FirstOrDefaultAsync()
-            ?? throw new KeyNotFoundException($"Role with ID {id} not found.");
+            ?? throw new KeyNotFoundException($"Role Not Found");
 
         return Ok(ApiResponse<RoleDto>.Success(entity,$"Get By ID Succeeded"));
     }

@@ -46,7 +46,7 @@ public class ChangeLogController : ControllerBase
         return Ok(ApiResponse<List<ChangeLogDto>>.Success(entity, $"Get N Top Succeeded"));
     }
 
-    [HttpGet("logid/{id}")]
+    [HttpGet("logid/{id:guid}")]
     public async Task<IActionResult> GetByLogId(Guid id)
     {
         var entity = await _context.ChangeLogs
@@ -68,7 +68,7 @@ public class ChangeLogController : ControllerBase
         return Ok(ApiResponse<List<ChangeLogDto>>.Success(entity, $"Get By Log ID Succeeded"));
     }
 
-    [HttpGet("id/{id}")]
+    [HttpGet("id/{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var entity = await _context.ChangeLogs
@@ -89,7 +89,7 @@ public class ChangeLogController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("id/{id}")]
+    [HttpDelete("id/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));

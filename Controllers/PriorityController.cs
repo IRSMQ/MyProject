@@ -37,7 +37,7 @@ public class PriorityController : ControllerBase
         return Ok(ApiResponse<List<PriorityDto>>.Success(entity,$"Get All Succeeded"));
     }
 
-    [HttpGet("getByID/{id}")]
+    [HttpGet("getByID/{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var entity = await _context.Priorities
@@ -49,7 +49,7 @@ public class PriorityController : ControllerBase
                 PriorityName = e.PriorityName
             })
             .FirstOrDefaultAsync()
-            ?? throw new KeyNotFoundException($"Priority with ID {id} not found.");
+            ?? throw new KeyNotFoundException($"Priority Not Found");
 
         return Ok(ApiResponse<PriorityDto>.Success(entity,$"Get By ID Succeeded"));
     }
@@ -133,7 +133,7 @@ public class PriorityController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id}")]
+    [HttpDelete("delete/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));

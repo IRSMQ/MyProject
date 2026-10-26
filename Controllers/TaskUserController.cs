@@ -24,7 +24,7 @@ public class TaskUserController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("getall")]
+    [HttpGet("all")]
     public async Task<IActionResult> GetAll()
     {
         var entity = await _context.TaskUsers
@@ -47,14 +47,14 @@ public class TaskUserController : ControllerBase
         return Ok(ApiResponse<List<TaskUserDto>>.Success(entity,$"Get All Succeeded"));
     }
 
-    [HttpGet("getbyid")]
+    [HttpGet("id/{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var entity = await _context.TaskUsers
             .AsNoTracking()
             .Include(e => e.User)
             .Include(e => e.Task)
-            .Where(e => !e.IsDeleted)
+            .Where(e => e.TaskUserId == id && !e.IsDeleted)
             .Select(e => new TaskUserDto
             {
                 TaskId = e.TaskId,
@@ -66,6 +66,48 @@ public class TaskUserController : ControllerBase
             ?? throw new KeyNotFoundException("Task User Not Found");
 
         return Ok(ApiResponse<TaskUserDto>.Success(entity,$"Get All Succeeded"));
+    }
+
+    [HttpGet("taskid/{id:guid}")]
+    public async Task<IActionResult> GetByTaskId(Guid id)
+    {
+        var entity = await _context.TaskUsers
+            .AsNoTracking()
+            .Include(e => e.User)
+            .Include(e => e.Task)
+            .Where(e => e.TaskId == id && !e.IsDeleted)
+            .Select(e => new TaskUserDto
+            {
+                TaskId = e.TaskId,
+                UserId = e.UserId,
+                TaskName = e.Task.Title,
+                UserName = e.User.UserFullName
+            })
+            .ToListAsync()
+            ?? throw new KeyNotFoundException("Task User Not Found");
+
+        return Ok(ApiResponse<List<TaskUserDto>>.Success(entity,$"Get All Succeeded"));
+    }
+
+    [HttpGet("userid/{id:guid}")]
+    public async Task<IActionResult> GetByUserId(Guid id)
+    {
+        var entity = await _context.TaskUsers
+            .AsNoTracking()
+            .Include(e => e.User)
+            .Include(e => e.Task)
+            .Where(e => e.UserId == id && !e.IsDeleted)
+            .Select(e => new TaskUserDto
+            {
+                TaskId = e.TaskId,
+                UserId = e.UserId,
+                TaskName = e.Task.Title,
+                UserName = e.User.UserFullName
+            })
+            .ToListAsync()
+            ?? throw new KeyNotFoundException("Task User Not Found");
+
+        return Ok(ApiResponse<List<TaskUserDto>>.Success(entity,$"Get All Succeeded"));
     }
 
     [Authorize]
@@ -211,7 +253,7 @@ public class TaskUserController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id}")]
+    [HttpDelete("delete/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));

@@ -45,8 +45,27 @@ public class RolePermissionController : ControllerBase
         return Ok(ApiResponse<List<RPDto>>.Success(entity, $"Get All Succeeded"));
     }
 
+    [HttpGet("id/{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var entity = await _context.RolePermissions
+            .AsNoTracking()
+            .Where(e => e.RoleId == id && !e.IsDeleted)
+            .Select(e => new RPDto
+            {
+                Rpid = e.RolePermissionId,
+                RoleID = e.RoleId,
+                PermissionID = e.PermissionId,
+                RoleName = e.Role.RoleName,
+                PermissionName = e.Permission.PermissionName
+            })
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"RolePermission Not Found");
 
-    [HttpGet("byRole/{id}")]
+        return Ok(ApiResponse<RPDto>.Success(entity, $"Succeeded"));
+    }
+
+    [HttpGet("roleid/{id:guid}")]
     public async Task<IActionResult> GetByRoleId(Guid id)
     {
         var entity = await _context.RolePermissions
@@ -63,13 +82,13 @@ public class RolePermissionController : ControllerBase
             .ToListAsync();
 
         if (entity.Count == 0)
-            throw new KeyNotFoundException($"RolePermission With ID: {id} Not Exist");
+            throw new KeyNotFoundException($"RolePermission Not Found");
 
         return Ok(ApiResponse<List<RPDto>>.Success(entity, $"Succeeded"));
     }
 
 
-    [HttpGet("byPermission/{id:guid}")]
+    [HttpGet("permissionid/{id:guid}")]
     public async Task<IActionResult> GetByPermissionId(Guid id)
     {
         var entity = await _context.RolePermissions
@@ -86,7 +105,7 @@ public class RolePermissionController : ControllerBase
             .ToListAsync();
 
         if (entity.Count == 0)
-            throw new KeyNotFoundException($"RolePermission Not Exist");
+            throw new KeyNotFoundException($"RolePermission Not Found");
 
         return Ok(ApiResponse<List<RPDto>>.Success(entity, $"Succeeded"));
     }

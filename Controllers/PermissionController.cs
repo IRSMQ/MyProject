@@ -37,7 +37,7 @@ public class PermissionController : ControllerBase
         return Ok(ApiResponse<List<PermissionDto>>.Success(entity,$"Get All Succeeded"));
     }
 
-    [HttpGet("id/{id}")]
+    [HttpGet("id/{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var entity = await _context.Permissions
@@ -51,7 +51,7 @@ public class PermissionController : ControllerBase
             .FirstOrDefaultAsync();
 
         if (entity == null)
-            throw new KeyNotFoundException($"Permission with ID {id} not found.");
+            throw new KeyNotFoundException($"Permission Not Found");
 
         return Ok(ApiResponse<PermissionDto>.Success(entity,$"Get All Succeeded"));
     }
@@ -143,7 +143,7 @@ public class PermissionController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id}")]
+    [HttpDelete("delete/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));

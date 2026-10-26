@@ -51,7 +51,7 @@ public class ProjectController : ControllerBase
         return Ok(ApiResponse<List<ProjectDto>>.Success(projects,$"Get All Succeeded"));
     }
 
-    [HttpGet("id/{id}")]
+    [HttpGet("id/{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var entity = await _context.Projects
@@ -79,7 +79,7 @@ public class ProjectController : ControllerBase
             .FirstOrDefaultAsync();
 
         if (entity == null)
-            throw new KeyNotFoundException($"Project with ID {id} not found.");
+            throw new KeyNotFoundException($"Project Not Found");
 
         return Ok(ApiResponse<ProjectDto>.Success(entity,$"Get By ID Succeeded"));
     }
@@ -105,6 +105,8 @@ public class ProjectController : ControllerBase
 
         if (entity != null)
             throw new ArgumentException("Project already exists.");        
+
+        entity = new Project();
 
         if (dto.ProjectId.HasValue)
         {
@@ -180,12 +182,16 @@ public class ProjectController : ControllerBase
         else
         {
             await _logService.CheckToken(tokenUserId, tokenRoleId, "AddProject");
+
             if (dto.ManagerId.HasValue)
             {
                 var entityUser = await _context.Users
                     .Include(e => e.Role)
                     .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
                     ?? throw new KeyNotFoundException("User Not Found");
+
+                if (entityUser.RoleId == null)
+                    throw new ArgumentException("Role Is Null");
 
                 if (entityUser.Role.RoleName != "Manager")
                     throw new ArgumentException("Role Is Not Manager");
@@ -377,7 +383,7 @@ public class ProjectController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id}")]
+    [HttpDelete("delete/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new ArgumentException("Token User Is Null"));

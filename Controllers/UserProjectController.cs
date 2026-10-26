@@ -23,7 +23,7 @@ public class UserProjectController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("getall")]
+    [HttpGet("all")]
     public async Task<IActionResult> GetAll()
     {
         var entity = await _context.UserProjects
@@ -47,14 +47,14 @@ public class UserProjectController : ControllerBase
         return Ok(ApiResponse<List<UserProjectDto>>.Success(entity,$"Get All Succeeded"));
     }
 
-    [HttpGet("getbyid")]
+    [HttpGet("id/{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var entity = await _context.UserProjects
             .AsNoTracking()
             .Include(e => e.User)
             .Include(e => e.Project)
-            .Where(e => !e.IsDeleted)
+            .Where(e => e.UserProjectId == id && !e.IsDeleted)
             .Select(e => new UserProjectDto
             {
                 UserId = e.UserId,
@@ -66,6 +66,48 @@ public class UserProjectController : ControllerBase
             ?? throw new KeyNotFoundException("User Project Not Found");
 
         return Ok(ApiResponse<UserProjectDto>.Success(entity,$"Get All Succeeded"));
+    }
+
+    [HttpGet("userid/{id:guid}")]
+    public async Task<IActionResult> GetByUserId(Guid id)
+    {
+        var entity = await _context.UserProjects
+            .AsNoTracking()
+            .Include(e => e.User)
+            .Include(e => e.Project)
+            .Where(e => e.UserId == id && !e.IsDeleted)
+            .Select(e => new UserProjectDto
+            {
+                UserId = e.UserId,
+                ProjectId = e.UserProjectId,
+                UserName = e.User.UserFullName,
+                ProjectName = e.Project.ProjectName
+            })
+            .ToListAsync()
+            ?? throw new KeyNotFoundException("User Project Not Found");
+
+        return Ok(ApiResponse<List<UserProjectDto>>.Success(entity,$"Get All Succeeded"));
+    }
+
+    [HttpGet("Projectid/{id:guid}")]
+    public async Task<IActionResult> GetByProjectId(Guid id)
+    {
+        var entity = await _context.UserProjects
+            .AsNoTracking()
+            .Include(e => e.User)
+            .Include(e => e.Project)
+            .Where(e => e.ProjectId == id && !e.IsDeleted)
+            .Select(e => new UserProjectDto
+            {
+                UserId = e.UserId,
+                ProjectId = e.UserProjectId,
+                UserName = e.User.UserFullName,
+                ProjectName = e.Project.ProjectName
+            })
+            .ToListAsync()
+            ?? throw new KeyNotFoundException("User Project Not Found");
+
+        return Ok(ApiResponse<List<UserProjectDto>>.Success(entity,$"Get All Succeeded"));
     }
 
     [Authorize]
@@ -196,7 +238,7 @@ public class UserProjectController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id}")]
+    [HttpDelete("delete/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));

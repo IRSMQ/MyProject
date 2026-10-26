@@ -23,7 +23,7 @@ public class UserPermissionController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("getall")]
+    [HttpGet("all")]
     public async Task<IActionResult> GetAll()
     {
         var entity = await _context.UserPermissions
@@ -46,14 +46,14 @@ public class UserPermissionController : ControllerBase
         return Ok(ApiResponse<List<UserPermissionDto>>.Success(entity,$"Get All Succeeded"));
     }
 
-    [HttpGet("getbyid")]
+    [HttpGet("id/{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var entity = await _context.UserPermissions
             .AsNoTracking()
             .Include(e => e.User)
             .Include(e => e.Permission)
-            .Where(e => !e.IsDeleted)
+            .Where(e => e.UserPermissionId == id && !e.IsDeleted)
             .Select(e => new UserPermissionDto
             {
                 UserId = e.UserId,
@@ -65,6 +65,48 @@ public class UserPermissionController : ControllerBase
             ?? throw new KeyNotFoundException("User Permission Not Found");
 
         return Ok(ApiResponse<UserPermissionDto>.Success(entity,$"Get All Succeeded"));
+    }
+
+    [HttpGet("userid/{id:guid}")]
+    public async Task<IActionResult> GetByUserId(Guid id)
+    {
+        var entity = await _context.UserPermissions
+            .AsNoTracking()
+            .Include(e => e.User)
+            .Include(e => e.Permission)
+            .Where(e => e.UserId == id && !e.IsDeleted)
+            .Select(e => new UserPermissionDto
+            {
+                UserId = e.UserId,
+                PermissionId = e.UserPermissionId,
+                UserName = e.User.UserFullName,
+                PermissionName = e.Permission.PermissionName
+            })
+            .ToListAsync()
+            ?? throw new KeyNotFoundException("User Permission Not Found");
+
+        return Ok(ApiResponse<List<UserPermissionDto>>.Success(entity,$"Get All Succeeded"));
+    }
+
+    [HttpGet("permissionid/{id:guid}")]
+    public async Task<IActionResult> GetByPermissionId(Guid id)
+    {
+        var entity = await _context.UserPermissions
+            .AsNoTracking()
+            .Include(e => e.User)
+            .Include(e => e.Permission)
+            .Where(e => e.PermissionId == id && !e.IsDeleted)
+            .Select(e => new UserPermissionDto
+            {
+                UserId = e.UserId,
+                PermissionId = e.UserPermissionId,
+                UserName = e.User.UserFullName,
+                PermissionName = e.Permission.PermissionName
+            })
+            .ToListAsync()
+            ?? throw new KeyNotFoundException("User Permission Not Found");
+
+        return Ok(ApiResponse<List<UserPermissionDto>>.Success(entity,$"Get All Succeeded"));
     }
 
     [Authorize]
@@ -186,7 +228,7 @@ public class UserPermissionController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id}")]
+    [HttpDelete("delete/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));

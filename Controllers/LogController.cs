@@ -47,7 +47,7 @@ public class LogController : ControllerBase
         return Ok(ApiResponse<List<LogDto>>.Success(entity,$"Get N Top Succeeded"));
     }
 
-    [HttpGet("id/{id}")]
+    [HttpGet("id/{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var entity = await _context.Logs
@@ -69,7 +69,7 @@ public class LogController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("id/{id}")]
+    [HttpDelete("id/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));

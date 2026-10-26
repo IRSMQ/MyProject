@@ -70,7 +70,7 @@ public class TaskManagementController : ControllerBase
             .Include(e => e.Priority)
             .Include(e => e.Parent)
             .FirstOrDefaultAsync(e => e.TaskManagementId == id && !e.IsDeleted)
-            ?? throw new KeyNotFoundException($"Task with ID {id} Not Found");
+            ?? throw new KeyNotFoundException($"Task Not Found");
 
         return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Get By ID Succeeded"));
     }
