@@ -46,7 +46,7 @@ public class ChangeLogController : ControllerBase
         return Ok(ApiResponse<List<ChangeLogDto>>.Success(entity, $"Get N Top Succeeded"));
     }
 
-    [HttpGet()]
+    [HttpGet]
     public async Task<IActionResult> GetByLogId([FromQuery] Guid id)
     {
         var entity = await _context.ChangeLogs
