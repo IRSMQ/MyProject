@@ -23,7 +23,7 @@ public class RoleController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("all")]
+    [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var entity = await _context.Roles
@@ -39,8 +39,8 @@ public class RoleController : ControllerBase
         return Ok(ApiResponse<List<RoleDto>>.Success(entity,$"Succeeded"));
     }
 
-    [HttpGet("getbyid/{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    [HttpGet]
+    public async Task<IActionResult> GetById([FromQuery] Guid id)
     {
         var entity = await _context.Roles
             .AsNoTracking()
@@ -57,8 +57,8 @@ public class RoleController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("add")]
-    public async Task<IActionResult> Add([FromBody] RoleDto dto)
+    [HttpPost]
+    public async Task<IActionResult> Add([FromQuery] RoleDto dto)
     {
 
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
@@ -152,8 +152,8 @@ public class RoleController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id)
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);

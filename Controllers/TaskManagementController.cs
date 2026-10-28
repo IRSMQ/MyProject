@@ -24,7 +24,7 @@ public class TaskManagementController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("all")]
+    [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var entity = await _context.TaskManagements
@@ -61,8 +61,8 @@ public class TaskManagementController : ControllerBase
         return Ok(ApiResponse<List<TaskManagementDto>>.Success(entity,$"Get All Succeeded"));
     }
 
-    [HttpGet("byid/{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    [HttpGet]
+    public async Task<IActionResult> GetById([FromQuery] Guid id)
     {
         var entity = await _context.TaskManagements
             .Include(e => e.Project)
@@ -76,8 +76,8 @@ public class TaskManagementController : ControllerBase
     }
 
     [Authorize]
-    [HttpPatch("edit/status")]
-    public async Task<IActionResult> Status([FromBody] TaskEditObject dto)
+    [HttpPatch]
+    public async Task<IActionResult> Status([FromQuery] TaskEditObject dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -127,8 +127,8 @@ public class TaskManagementController : ControllerBase
     }
 
     [Authorize]
-    [HttpPatch("edit/priority")]
-    public async Task<IActionResult> Priority([FromBody] TaskEditObject dto)
+    [HttpPatch]
+    public async Task<IActionResult> Priority([FromQuery] TaskEditObject dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -171,8 +171,8 @@ public class TaskManagementController : ControllerBase
     }
 
     [Authorize]
-    [HttpPatch("edit/parent")]
-    public async Task<IActionResult> Parent([FromBody] TMEPDto dto)
+    [HttpPatch]
+    public async Task<IActionResult> Parent([FromQuery] TMEPDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -249,8 +249,8 @@ public class TaskManagementController : ControllerBase
     }
 
     [Authorize]
-    [HttpPatch("edit/title")]
-    public async Task<IActionResult> Title([FromBody] EditString editString)
+    [HttpPatch]
+    public async Task<IActionResult> Title([FromQuery] EditString editString)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -302,8 +302,8 @@ public class TaskManagementController : ControllerBase
     }
 
     [Authorize]
-    [HttpPatch("edit/desc")]
-    public async Task<IActionResult> Desc([FromBody] EditString editString)
+    [HttpPatch]
+    public async Task<IActionResult> Desc([FromQuery] EditString editString)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -342,8 +342,8 @@ public class TaskManagementController : ControllerBase
     }
 
     [Authorize]
-    [HttpPut("edit/date")]
-    public async Task<IActionResult> EditDate([FromBody] EditDates editDate)
+    [HttpPut]
+    public async Task<IActionResult> EditDate([FromQuery] EditDates editDate)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -452,8 +452,8 @@ public class TaskManagementController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("add")]
-    public async Task<IActionResult> Add([FromBody] TMDtoAdd dto)
+    [HttpPost]
+    public async Task<IActionResult> Add([FromQuery] TMDtoAdd dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -708,8 +708,8 @@ public class TaskManagementController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id)
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);

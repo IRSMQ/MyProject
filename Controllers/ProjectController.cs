@@ -9,7 +9,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 namespace Test26.Controller;
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/[controller]/[action]")]
 public class ProjectController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
@@ -21,7 +21,7 @@ public class ProjectController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("all")]
+    [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var projects = await _context.Projects
@@ -51,8 +51,8 @@ public class ProjectController : ControllerBase
         return Ok(ApiResponse<List<ProjectDto>>.Success(projects,$"Get All Succeeded"));
     }
 
-    [HttpGet("id/{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    [HttpGet]
+    public async Task<IActionResult> GetById([FromQuery] Guid id)
     {
         var entity = await _context.Projects
             .Include(e => e.Status)
@@ -85,8 +85,8 @@ public class ProjectController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("add")]
-    public async Task<IActionResult> Add([FromBody] CreateProject dto)
+    [HttpPost]
+    public async Task<IActionResult> Add([FromQuery] CreateProject dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new ArgumentException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -273,8 +273,8 @@ public class ProjectController : ControllerBase
     }
 
     [Authorize]
-    [HttpPut("edit/date")]
-    public async Task<IActionResult> EditDate([FromBody] EditAllDate dto)
+    [HttpPut]
+    public async Task<IActionResult> EditDate([FromQuery] EditAllDate dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -383,8 +383,8 @@ public class ProjectController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id)
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new ArgumentException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);

@@ -9,7 +9,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 namespace Test26.Controller;
 
-[Route("api/[controller]")]
+[Route("api/[controller]/[action]")]
 [ApiController]
 public class PriorityController : ControllerBase
 {
@@ -21,7 +21,7 @@ public class PriorityController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("getall")]
+    [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var entity = await _context.Priorities
@@ -37,8 +37,8 @@ public class PriorityController : ControllerBase
         return Ok(ApiResponse<List<PriorityDto>>.Success(entity,$"Get All Succeeded"));
     }
 
-    [HttpGet("getByID/{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    [HttpGet]
+    public async Task<IActionResult> GetById([FromQuery] Guid id)
     {
         var entity = await _context.Priorities
             .AsNoTracking()
@@ -55,8 +55,8 @@ public class PriorityController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("add")]
-    public async Task<IActionResult> Add([FromBody] PriorityAddDto dto)
+    [HttpPost]
+    public async Task<IActionResult> Add([FromQuery] PriorityAddDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -133,8 +133,8 @@ public class PriorityController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id)
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);

@@ -33,7 +33,7 @@ public class UserController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("getall")]
+    [HttpGet]
     public async Task<IActionResult> GetAllUser()
     {
         var users = await _context.Users
@@ -57,8 +57,8 @@ public class UserController : ControllerBase
         return Ok(ApiResponse<List<UserDto>>.Success(users, $"Get All Succeeded"));
     }
 
-    [HttpGet("get/{id:guid}")]
-    public async Task<IActionResult> GetUserById(Guid id)
+    [HttpGet]
+    public async Task<IActionResult> GetUserById([FromQuery] Guid id)
     {
         var user = await _context.Users
             .Include(e => e.Role)
@@ -68,8 +68,8 @@ public class UserController : ControllerBase
         return Ok(ApiResponse<UserDto>.Success(UserToDto(user),$"Get By ID Succeeded"));
     }
 
-    [HttpPost("add")]
-    public async Task<IActionResult> Add([FromBody] UserAddDto dto)
+    [HttpPost]
+    public async Task<IActionResult> Add([FromQuery] UserAddDto dto)
     {   
 
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
@@ -198,8 +198,8 @@ public class UserController : ControllerBase
         return Ok(ApiResponse<UserDto>.Success(UserToDto(entity), $"{text}"));
     }
 
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] UserLoginDto userLoginDto)
+    [HttpPost]
+    public async Task<IActionResult> Login([FromQuery] UserLoginDto userLoginDto)
     {
         var entity = await _context.Users
             .Include(e => e.Role)
@@ -224,8 +224,8 @@ public class UserController : ControllerBase
     }
 
     [Authorize]
-    [HttpPatch("edit/status")]
-    public async Task<IActionResult> EditStatus([FromBody] UserEditStatus dto)
+    [HttpPatch]
+    public async Task<IActionResult> EditStatus([FromQuery] UserEditStatus dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -265,8 +265,8 @@ public class UserController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id)
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
