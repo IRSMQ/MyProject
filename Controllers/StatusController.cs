@@ -57,8 +57,8 @@ public class StatusController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost]
-    public async Task<ActionResult<StatusDto>> Add([FromQuery] StatusAddDto dto)
+    [HttpPut]
+    public async Task<ActionResult<StatusDto>> Put([FromBody] StatusAddDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -151,7 +151,7 @@ public class StatusController : ControllerBase
 
     [Authorize]
     [HttpDelete]
-    public async Task<ActionResult<StatusDto>> Delete([FromQuery] Guid id)
+    public async Task<ActionResult<StatusDto>> Delete([FromBody] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);

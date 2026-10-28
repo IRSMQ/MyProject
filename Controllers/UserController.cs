@@ -68,8 +68,8 @@ public class UserController : ControllerBase
         return Ok(ApiResponse<UserDto>.Success(UserToDto(user),$"Get By ID Succeeded"));
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Add([FromQuery] UserAddDto dto)
+    [HttpPut]
+    public async Task<IActionResult> SIgnUp([FromBody] UserAddDto dto)
     {   
 
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
@@ -199,7 +199,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Login([FromQuery] UserLoginDto userLoginDto)
+    public async Task<IActionResult> Login([FromBody] UserLoginDto userLoginDto)
     {
         var entity = await _context.Users
             .Include(e => e.Role)
@@ -225,7 +225,7 @@ public class UserController : ControllerBase
 
     [Authorize]
     [HttpPatch]
-    public async Task<IActionResult> EditStatus([FromQuery] UserEditStatus dto)
+    public async Task<IActionResult> EditStatus([FromBody] UserEditStatus dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -266,7 +266,7 @@ public class UserController : ControllerBase
 
     [Authorize]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
