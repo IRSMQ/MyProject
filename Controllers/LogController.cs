@@ -12,7 +12,7 @@ using Test26.DTOs;
 namespace Test26.Controller;
 
 
-[Route("api/[controller]")]
+[Route("api/[controller]/[action]")]
 [ApiController]
 public class LogController : ControllerBase
 {

@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Test26.Controller;
 
 
-[Route("api/[controller]")]
+[Route("api/[controller]/[action]")]
 [ApiController]
 public class UserController : ControllerBase
 {

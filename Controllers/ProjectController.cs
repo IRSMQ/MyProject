@@ -9,7 +9,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 namespace Test26.Controller;
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/[controller]/[action]")]
 public class ProjectController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;

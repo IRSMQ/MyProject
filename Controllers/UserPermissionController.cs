@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Test26.Controller;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/[controller]/[action]")]
 public class UserPermissionController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;

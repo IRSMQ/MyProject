@@ -11,7 +11,7 @@ using System.Security.Claims;
 namespace Test26.Controller;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/[controller]/[action]")]
 public class UserProjectController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;

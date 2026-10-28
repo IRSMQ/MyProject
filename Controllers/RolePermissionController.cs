@@ -11,7 +11,7 @@ using Test26.Service;
 namespace Test26.Controller;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/[controller]/[action]")]
 public class RolePermissionController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
