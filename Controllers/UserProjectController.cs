@@ -23,7 +23,7 @@ public class UserProjectController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("all")]
+    [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var entity = await _context.UserProjects
@@ -47,8 +47,8 @@ public class UserProjectController : ControllerBase
         return Ok(ApiResponse<List<UserProjectDto>>.Success(entity,$"Get All Succeeded"));
     }
 
-    [HttpGet("id/{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    [HttpGet]
+    public async Task<IActionResult> GetById([FromQuery] Guid id)
     {
         var entity = await _context.UserProjects
             .AsNoTracking()
@@ -68,8 +68,8 @@ public class UserProjectController : ControllerBase
         return Ok(ApiResponse<UserProjectDto>.Success(entity,$"Get All Succeeded"));
     }
 
-    [HttpGet("userid/{id:guid}")]
-    public async Task<IActionResult> GetByUserId(Guid id)
+    [HttpGet]
+    public async Task<IActionResult> GetByUserId([FromQuery] Guid id)
     {
         var entity = await _context.UserProjects
             .AsNoTracking()
@@ -89,8 +89,8 @@ public class UserProjectController : ControllerBase
         return Ok(ApiResponse<List<UserProjectDto>>.Success(entity,$"Get All Succeeded"));
     }
 
-    [HttpGet("Projectid/{id:guid}")]
-    public async Task<IActionResult> GetByProjectId(Guid id)
+    [HttpGet]
+    public async Task<IActionResult> GetByProjectId([FromQuery] Guid id)
     {
         var entity = await _context.UserProjects
             .AsNoTracking()
@@ -111,8 +111,8 @@ public class UserProjectController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("add")]
-    public async Task<IActionResult> Add(UserProjectDtoAdd dto)
+    [HttpPost]
+    public async Task<IActionResult> Add([FromQuery] UserProjectDtoAdd dto)
     {
 
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
@@ -238,8 +238,8 @@ public class UserProjectController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id)
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);

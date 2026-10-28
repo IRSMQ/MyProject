@@ -25,8 +25,8 @@ public class ChangeLogController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("top/{n}")]
-    public async Task<IActionResult> GetNTop(int n)
+    [HttpGet]
+    public async Task<IActionResult> GetNTop([FromQuery] int n)
     {
         var entity = await _context.ChangeLogs
             .AsNoTracking()
@@ -46,8 +46,8 @@ public class ChangeLogController : ControllerBase
         return Ok(ApiResponse<List<ChangeLogDto>>.Success(entity, $"Get N Top Succeeded"));
     }
 
-    [HttpGet("logid/{id:guid}")]
-    public async Task<IActionResult> GetByLogId(Guid id)
+    [HttpGet()]
+    public async Task<IActionResult> GetByLogId([FromQuery] Guid id)
     {
         var entity = await _context.ChangeLogs
             .AsNoTracking()
@@ -68,8 +68,8 @@ public class ChangeLogController : ControllerBase
         return Ok(ApiResponse<List<ChangeLogDto>>.Success(entity, $"Get By Log ID Succeeded"));
     }
 
-    [HttpGet("id/{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    [HttpGet]
+    public async Task<IActionResult> GetById([FromQuery] Guid id)
     {
         var entity = await _context.ChangeLogs
             .AsNoTracking()
@@ -89,8 +89,8 @@ public class ChangeLogController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("id/{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id)
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);

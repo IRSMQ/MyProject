@@ -23,7 +23,7 @@ public class StatusController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("all")]
+    [HttpGet]
     public async Task<ActionResult<List<StatusDto>>> GetAll()
     {
         var entity = await _context.Statuses
@@ -39,8 +39,8 @@ public class StatusController : ControllerBase
         return Ok(entity);
     }
 
-    [HttpGet("byid/{id:guid}")]
-    public async Task<ActionResult<StatusDto>> GetById(Guid id)
+    [HttpGet]
+    public async Task<ActionResult<StatusDto>> GetById([FromQuery] Guid id)
     {
         var entity = await _context.Statuses
             .AsNoTracking()
@@ -57,8 +57,8 @@ public class StatusController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost("add")]
-    public async Task<ActionResult<StatusDto>> Add([FromBody] StatusAddDto dto)
+    [HttpPost]
+    public async Task<ActionResult<StatusDto>> Add([FromQuery] StatusAddDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -150,8 +150,8 @@ public class StatusController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("delete/{id:guid}")]
-    public async Task<ActionResult<StatusDto>> Delete(Guid id)
+    [HttpDelete]
+    public async Task<ActionResult<StatusDto>> Delete([FromQuery] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);

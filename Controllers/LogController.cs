@@ -25,8 +25,8 @@ public class LogController : ControllerBase
         _logService = logService;
     }
 
-    [HttpGet("top/{n}")]
-    public async Task<IActionResult> GetNTop(int n)
+    [HttpGet]
+    public async Task<IActionResult> GetNTop([FromQuery] int n)
     {
         var entity = await _context.Logs
             .AsNoTracking()
@@ -47,8 +47,8 @@ public class LogController : ControllerBase
         return Ok(ApiResponse<List<LogDto>>.Success(entity,$"Get N Top Succeeded"));
     }
 
-    [HttpGet("id/{id:guid}")]
-    public async Task<IActionResult> GetById(Guid id)
+    [HttpGet]
+    public async Task<IActionResult> GetById([FromQuery] Guid id)
     {
         var entity = await _context.Logs
             .AsNoTracking()
@@ -69,8 +69,8 @@ public class LogController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("id/{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id)
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
