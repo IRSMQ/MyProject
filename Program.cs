@@ -81,12 +81,14 @@ builder.Services.AddScoped<LogService>();
 var app = builder.Build();
 ////////////////////////////////////
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
+// if (app.Environment.IsDevelopment())
+// {
+//     app.MapOpenApi();
+//     app.MapScalarApiReference();
+// }
 
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
