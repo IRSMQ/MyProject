@@ -78,32 +78,26 @@ public class PriorityController : ControllerBase
         if (entity != null)
             throw new ArgumentException("Priority already exists.");
 
-        string text;
+        string message;
+        string textLog = string.Empty;
 
         if (dto.PriorityId.HasValue)
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditPriority");
+            
             entity = await _context.Priorities
                 .FirstOrDefaultAsync(e => e.PriorityId == dto.PriorityId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Priority Not Found");
 
             if (entity.PriorityName == dto.PriorityName)
             {
-                text = "Priority Name Exist";
+                message = "Priority Name Exist";
             }
             else
             {
-                var logId = await _logService.Log("Edit", nameof(Priority), entity.PriorityId);
-
-                await _logService.ChangLog(
-                    logId,
-                    entity.PriorityName.ToString(),
-                    dto.PriorityName.ToString(),
-                    nameof(entity.PriorityName)
-                );
-
                 entity.PriorityName = dto.PriorityName;
-                text = "Edit Succeeded";
+                message = "Edit Succeeded";
+                textLog = "Edit";
             }
         }
         else
@@ -116,22 +110,18 @@ public class PriorityController : ControllerBase
                 IsDeleted = false
             };
 
-            var logId = await _logService.Log("Create", nameof(Priority), entity.PriorityId);
-
-            await _logService.ChangLog(
-                logId,
-                "null",
-                dto.PriorityName,
-                nameof(entity.PriorityName)
-            );
-
             await _context.Priorities.AddAsync(entity);
-            text = "Add Succeeded";
+            message = "Add Succeeded";
+            textLog = "Crreate";
         }
+
+        var entry = _context.Priorities.Entry(entity);
+
+        await _logService.Log(textLog, nameof(Priority), entity.PriorityId, entry);    
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<PriorityDto>.Success(PriorityToDto(entity), $"{text}"));
+        return Ok(ApiResponse<PriorityDto>.Success(PriorityToDto(entity), $"{message}"));
     }
 
     [Authorize]
@@ -158,7 +148,7 @@ public class PriorityController : ControllerBase
 
         entity.IsDeleted = true;
 
-        await _logService.Log("Delete", nameof(Priority), entity.PriorityId);
+        await _logService.Log("Delete", nameof(Priority), entity.PriorityId, null);
 
 
         /////////////////////////////////////////////////////////
@@ -168,16 +158,9 @@ public class PriorityController : ControllerBase
 
         foreach (var e in entityProject)
         {
-            var logId = await _logService.Log("Edit", nameof(Project), e.ProjectId);
-
-            await _logService.ChangLog(
-                logId,
-                e.PriorityId?.ToString() ?? "null",
-                "null",
-                nameof(e.Priority)
-            );
-            
             e.Priority = null;
+            var entry = _context.Projects.Entry(e);
+            await _logService.Log("Edit", nameof(Project), e.ProjectId, entry);
         }
 
 
@@ -188,15 +171,9 @@ public class PriorityController : ControllerBase
 
         foreach (var e in entityTaskManagement)
         {
-            var logId = await _logService.Log("Edit", nameof(TaskManagement), e.TaskManagementId);
-            await _logService.ChangLog(
-                logId,
-                e.PriorityId?.ToString() ?? "null",
-                "null",
-                nameof(e.PriorityId)
-            );
-
             e.PriorityId = null;
+            var entry = _context.TaskManagements.Entry(e);
+            await _logService.Log("Edit", nameof(TaskManagement), e.TaskManagementId, entry);
         }
 
         await _context.SaveChangesAsync();

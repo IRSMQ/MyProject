@@ -109,10 +109,17 @@ public class ProjectController : ControllerBase
             throw new ArgumentException("Project already exists.");        
 
         entity = new Project();
+        string message = string.Empty;
+        string textLog = string.Empty;
 
         if (dto.ProjectId.HasValue)
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditProject");
+
+            entity = await _context.Projects
+                .FirstOrDefaultAsync(e => e.ProjectId == dto.ProjectId && !e.IsDeleted)
+                ?? throw new KeyNotFoundException("Project Not Found");
+
             if (dto.Nullable)
             {
                 entity.ManagerId = dto.ManagerId;
@@ -160,26 +167,8 @@ public class ProjectController : ControllerBase
             }
 
             entity.Desc = dto.Description ?? entity.Desc;
-
-            var entry = _context.Entry(entity);
-
-            var modifiedProps = entry.Properties
-                .Where(p => p.IsModified)
-                .Select(p => new
-                {
-                    ColumnName = p.Metadata.Name,
-                    OldVal = p.OriginalValue?.ToString() ?? "null",
-                    NewVal = p.CurrentValue?.ToString() ?? "null"
-                })
-                .ToList();
-
-            if (modifiedProps.Any())
-            {
-                var logId = await _logService.Log("Edit", nameof(Project), entity.ProjectId);
-
-                foreach (var change in modifiedProps)
-                    await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
-            }
+            message = "Edit Succeeded";
+            textLog = "Edit";
         }
         else
         {
@@ -199,38 +188,6 @@ public class ProjectController : ControllerBase
                     throw new ArgumentException("Role Is Not Manager");
             }
 
-            if (dto.StartDate.HasValue && dto.CreationDate.HasValue)
-            {
-                if (dto.StartDate < dto.CreationDate)
-                {
-                    throw new ArgumentException("Start Date < Creation Date");
-                }
-            }
-
-            if (dto.EndDate.HasValue && dto.StartDate.HasValue)
-            {
-                if (dto.EndDate < dto.StartDate)
-                {
-                    throw new ArgumentException("End Date < Start Date");
-                }
-            }
-
-            if (dto.DueDate.HasValue && dto.EndDate.HasValue)
-            {
-                if (dto.DueDate > dto.EndDate)
-                {
-                    throw new ArgumentException("Due Date > End Date");
-                }
-            }
-
-            if (dto.DueDate.HasValue && dto.StartDate.HasValue)
-            {
-                if (dto.DueDate < dto.StartDate)
-                {
-                    throw new ArgumentException("Due Date < Start Date");
-                }
-            }
-
             entity = new Project
             {
                 ProjectId = Guid.NewGuid(),
@@ -246,28 +203,14 @@ public class ProjectController : ControllerBase
                 IsDeleted = false
             };
 
-            
-            var logId = await _logService.Log("Create", nameof(Project), entity.ProjectId);
-
-            var entry = _context.Entry(entity);
-            
-            foreach (var prop in entry.Properties)
-            {
-                if (prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        oldValue: "null",
-                        newValue: prop.CurrentValue?.ToString() ?? "null",
-                        columnName: prop.Metadata.Name
-                    );
-                }
-            }
-
             await _context.Projects.AddAsync(entity);
+            message = "Add Succeeded";
+            textLog = "Create";
         }
 
-        
+        var entry = _context.Projects.Entry(entity);
+
+        await _logService.Log(textLog, nameof(Project), entity.ProjectId, entry);
 
         await _context.SaveChangesAsync();
 
@@ -357,27 +300,7 @@ public class ProjectController : ControllerBase
 
         var entry = _context.Entry(entity);
 
-        var modifiedProps = entry.Properties
-            .Where(e => e.IsModified)
-            .Select(e => new
-            {
-                ColumnName = e.Metadata.Name,
-                OldVal = e.OriginalValue?.ToString() ?? "null",
-                NewVal = e.CurrentValue?.ToString() ?? "null"
-            })
-            .ToList();
-
-        if (modifiedProps.Any())
-        {
-            var tableName = _context.Model
-                .FindEntityType(typeof(Project))?
-                .GetTableName() ?? nameof(Project);
-
-            var logId = await _logService.Log("Edit", tableName, entity.ProjectId);
-
-            foreach (var change in modifiedProps)
-                await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
-        }
+        await _logService.Log("Edit", nameof(Project), entity.ProjectId, entry);
 
         await _context.SaveChangesAsync();
 

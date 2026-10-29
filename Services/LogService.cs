@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Test26.Context;
 // using Test26.Exception;
 
@@ -19,7 +20,7 @@ public class LogService
         _httpContextAccessor = IHTTP;
     }
 
-    public async Task<Guid> Log(string logTypeName, string tableName, Guid relatedId)
+    public async Task Log(string logTypeName, string tableName, Guid relatedId, EntityEntry? entry = null)
     {
         
         var userIdClaim = _httpContextAccessor.HttpContext?.User
@@ -43,7 +44,22 @@ public class LogService
         };
 
         await _context.Logs.AddAsync(newLog);
-        return logId;
+
+        if (entry != null)
+        {
+            foreach (var prop in entry.Properties)
+            {
+                if (prop.OriginalValue != prop.CurrentValue && prop.Metadata.Name != "IsDeleted")
+                {
+                    await ChangLog(
+                        logId,
+                        prop.OriginalValue.ToString(),
+                        prop.CurrentValue.ToString(),
+                        prop.Metadata.Name
+                    );
+                }
+            }
+        }
     }
 
     public async Task ChangLog(Guid logID, string oldValue, string newValue, string columnName)

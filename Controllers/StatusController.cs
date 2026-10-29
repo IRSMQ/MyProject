@@ -80,32 +80,26 @@ public class StatusController : ControllerBase
         if (entity != null)
             throw new ArgumentException("Status already exists");
 
-        string text;
+        string message = string.Empty;
+        string textLog = string.Empty;
 
         if (dto.StatusId.HasValue)
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditStatus");
+
             entity = await _context.Statuses
                 .FirstOrDefaultAsync(p => p.StatusId == dto.StatusId && !p.IsDeleted)
                 ?? throw new KeyNotFoundException($"Status Not Found");
 
             if (entity.StatusName == dto.StatusName)
             {
-                text = "Status Exist";
+                message = "Status Exist";
             }
             else
             {
-                var logId = await _logService.Log("Edit", nameof(Status), entity.StatusId);
-
-                await _logService.ChangLog(
-                    logId,
-                    entity.StatusName,
-                    dto.StatusName,
-                    nameof(entity.StatusName)
-                );
-
                 entity.StatusName = dto.StatusName;
-                text = "Edit Succeeded";
+                message = "Edit Succeeded";
+                textLog = "Edit";
             }
         }
         else
@@ -120,35 +114,23 @@ public class StatusController : ControllerBase
 
             await _context.Statuses.AddAsync(entity);
             
-            var logId = await _logService.Log("Create", nameof(Status), entity.StatusId);
-
-            await _logService.ChangLog(
-                    logId,
-                    "null",
-                    entity.StatusId.ToString(),
-                    nameof(entity.StatusId)
-                );
-
-            await _logService.ChangLog(
-                    logId,
-                    "null",
-                    dto.StatusName,
-                    nameof(entity.StatusName)
-                );
-
-            text = "Add Succeeded";
+            message = "Add Succeeded";
+            textLog = "Create";
         }
         
-
         var newStatus = new StatusDto
         {
             StatusId = entity.StatusId,
             StatusName = entity.StatusName
         };
 
+        var entry = _context.Statuses.Entry(entity);
+        
+        await _logService.Log(textLog, nameof(Status), entity.StatusId, entry);
+
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<StatusDto>.Success(newStatus, $"{text}"));
+        return Ok(ApiResponse<StatusDto>.Success(newStatus, $"{message}"));
     }
 
     [Authorize]
@@ -183,19 +165,11 @@ public class StatusController : ControllerBase
         {
             foreach (var e in entityProject)
             {
-                var logId = await _logService.Log("Edit", nameof(Project), e.ProjectId);
-
-                await _logService.ChangLog(
-                    logId,
-                    e.StatusId.ToString(),
-                    "null",
-                    nameof(e.StatusId)
-                );
-
                 e.StatusId = null;
+                var entry = _context.Projects.Entry(e);
+                await _logService.Log("Edit", nameof(Project), e.ProjectId, entry);                
             }
         }
-
 
         /////////////////////////////////////////////////////////
         var entityTaskManagement = await _context.TaskManagements
@@ -206,16 +180,9 @@ public class StatusController : ControllerBase
         {
             foreach (var e in entityTaskManagement)
             {
-                var logId = await _logService.Log("Edit", nameof(TaskManagement), e.TaskManagementId);
-
-                await _logService.ChangLog(
-                    logId,
-                    e.StatusId.ToString(),
-                    "null",
-                    nameof(e.StatusId)
-                );
-
                 e.StatusId = null;
+                var entry = _context.TaskManagements.Entry(e);
+                await _logService.Log("Edit", nameof(TaskManagement), e.TaskManagementId, entry);
             }
         }
 

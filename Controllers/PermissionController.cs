@@ -77,7 +77,8 @@ public class PermissionController : ControllerBase
         var entity = await _context.Permissions
             .FirstOrDefaultAsync(e => e.PermissionName == dto.PermissionName && !e.IsDeleted);
 
-        string text;
+        string message;
+        string textLog = string.Empty;
 
         if (entity != null)
             throw new ArgumentException("Permission already exists.");
@@ -92,21 +93,14 @@ public class PermissionController : ControllerBase
 
             if (entity.PermissionName == dto.PermissionName)
             {
-                text = "Permission Exist";
+                message = "Permission Exist";
             }
             else
             {
-                var logId = await _logService.Log("Edit", nameof(Permission), entity.PermissionId);
-
-                await _logService.ChangLog(
-                    logId,
-                    entity.PermissionName.ToString(),
-                    dto.PermissionName.ToString(),
-                    nameof(entity.PermissionName)
-                );
-
                 entity.PermissionName = dto.PermissionName;
-                text = "Edit Succeeded";
+                
+                message = "Edit Succeeded";
+                textLog = "Edit";
             }
         }
         else
@@ -121,16 +115,8 @@ public class PermissionController : ControllerBase
 
             await _context.Permissions.AddAsync(entity);
 
-            var logId = await _logService.Log("Create", nameof(Permission), entity.PermissionId);
-
-            await _logService.ChangLog(
-                logId,
-                "null",
-                entity.PermissionName,
-                nameof(entity.PermissionName)
-            );
-
-            text = "Add Succeeded";
+            message = "Add Succeeded";
+            textLog = "Create";
         }
 
         var newEntityDto = new PermissionDto
@@ -139,9 +125,12 @@ public class PermissionController : ControllerBase
             PermissionName = entity.PermissionName
         };
 
+        var entry = _context.Permissions.Entry(entity);
+        await _logService.Log(textLog, nameof(Permission), entity.PermissionId, entry);
+
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<PermissionDto>.Success(newEntityDto, $"{text}"));
+        return Ok(ApiResponse<PermissionDto>.Success(newEntityDto, $"{message}"));
     }
 
     [Authorize]

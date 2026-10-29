@@ -81,32 +81,25 @@ public class RoleController : ControllerBase
         if (entity != null)
             throw new ArgumentException("Role already exists");
 
-        string text;
+        string message = string.Empty;
+        string textLog = string.Empty;
 
         if (dto.RoleId.HasValue)
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditRole");
             entity = await _context.Roles
                 .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
-                ?? throw new KeyNotFoundException("Role with this ID not found");
+                ?? throw new KeyNotFoundException("Role Not Found");
 
             if (entity.RoleName == dto.RoleName)
             {
-                text = "Role Exist";
+                message = "Role Exist";
             }
             else
             {
-                var logId = await _logService.Log("Edit", nameof(Role), dto.RoleId.Value);
-
-                await _logService.ChangLog(
-                    logId,
-                    entity.RoleName,
-                    dto.RoleName,
-                    nameof(Role.RoleName)
-                );
-
                 entity.RoleName = dto.RoleName;
-                text = "Edit Succeeded";
+                message = "Edit Succeeded";
+                textLog = "Edit";
             }
         }
         else
@@ -121,25 +114,9 @@ public class RoleController : ControllerBase
 
             await _context.Roles.AddAsync(entity);
 
-            var logId = await _logService.Log("Create", nameof(Role), entity.RoleId);
-
-            await _logService.ChangLog(
-                logId,
-                "null",
-                entity.RoleId.ToString(),
-                nameof(entity.RoleId)
-                );
-
-            await _logService.ChangLog(
-                logId,
-                "null",
-                entity.RoleName,
-                nameof(entity.RoleName)
-                );
-
-
             await _context.AddAsync(entity);
-            text = "Add Succeeded";
+            message = "Add Succeeded";
+            textLog = "Create";
         }
 
         var newEntity = new RoleDto
@@ -148,9 +125,12 @@ public class RoleController : ControllerBase
             RoleName = entity.RoleName
         };
 
+        var entry = _context.Roles.Entry(entity);
+        await _logService.Log(textLog, nameof(Role), entity.RoleId, entry);
+
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<RoleDto>.Success(newEntity, $"{text}"));
+        return Ok(ApiResponse<RoleDto>.Success(newEntity, $"{message}"));
     }
 
     [Authorize]
@@ -181,18 +161,11 @@ public class RoleController : ControllerBase
             .Where(e => e.RoleId == id && !e.IsDeleted)
             .ToListAsync();
 
-        foreach (var u in entityUser)
+        foreach (var e in entityUser)
         {
-            u.RoleId = null;
-
-            var userLogId = await _logService.Log("Edit", nameof(User), u.UserId);
-
-            await _logService.ChangLog(
-                userLogId,
-                id.ToString(),
-                "null",
-                nameof(u.RoleId)
-            );
+            e.RoleId = null;
+            var entry = _context.Users.Entry(e);
+            await _logService.Log("Edit", nameof(User), e.UserId, entry);
         }
 
 
@@ -204,7 +177,7 @@ public class RoleController : ControllerBase
         foreach (var e in entityRolePermission)
         {
             e.IsDeleted = true;
-            var userLogId = await _logService.Log("Delete", nameof(RolePermission), e.RolePermissionId);
+            await _logService.Log("Delete", nameof(RolePermission), e.RolePermissionId);
         }
 
         entity.IsDeleted = true;
