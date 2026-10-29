@@ -16,11 +16,13 @@ public class UserProjectController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public UserProjectController(ProjectManagementSystemContext context, LogService logService)
+    public UserProjectController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -149,7 +151,7 @@ public class UserProjectController : ControllerBase
 
         if (dto.UserProjectId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditUserProject");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditUserProject");
             entity = await _context.UserProjects
                 .FirstOrDefaultAsync(e => e.UserProjectId == dto.UserProjectId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("User Project ID Not Found");
@@ -192,7 +194,7 @@ public class UserProjectController : ControllerBase
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddUserProject");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddUserProject");
             var newTU = new UserProject
             {
                 UserProjectId = Guid.NewGuid(),
@@ -251,7 +253,7 @@ public class UserProjectController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId, tokenRoleId, "DeleteUserProject");
+        await _tokenService.CheckToken(tokenUserId, tokenRoleId, "DeleteUserProject");
 
         //////////////////////////////////////////////////////////////////////
         

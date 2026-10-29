@@ -57,23 +57,23 @@ public class FilesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Download([FromQuery] Guid id)
     {
-        var document = await _context.Documents
+        var entity = await _context.Documents
             .FindAsync(id)
             ?? throw new KeyNotFoundException("File Not Found");
 
-        if (!System.IO.File.Exists(document.FilePath))
+        if (!System.IO.File.Exists(entity.FilePath))
             return NotFound("File Not Exist");
 
         var memory = new MemoryStream();
 
-        using (var stream = new FileStream(document.FilePath, FileMode.Open, FileAccess.Read))
+        using (var stream = new FileStream(entity.FilePath, FileMode.Open, FileAccess.Read))
         {
             await stream.CopyToAsync(memory);
         }
 
         memory.Position = 0;
 
-        return File(memory, document.ContentType, document.FileName);
+        return File(memory, entity.ContentType, entity.FileName);
         
     }
 }

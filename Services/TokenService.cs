@@ -7,14 +7,17 @@ using Test26.Models;
 using Test26.DTOs;
 using Test26.Context;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace Test26.Service;
 
 public class TokenService
 {
     private readonly IConfiguration _configuration;
-    public TokenService(IConfiguration configuration)
+    private readonly ProjectManagementSystemContext _context;
+    public TokenService(IConfiguration configuration, ProjectManagementSystemContext context)
     {
+        _context = context;
         _configuration = configuration;
     }
 
@@ -43,5 +46,39 @@ public class TokenService
         var token = tokenHandler.CreateToken(tokenDescriptor);
 
         return tokenHandler.WriteToken(token);
+    }
+
+    public async Task CheckToken(Guid tokenUserId, Guid? tokenRoleId, string PermissionTableName){
+
+        if (string.IsNullOrEmpty(tokenRoleId.ToString()))
+            throw new UnauthorizedAccessException("Token Role Is Null");
+
+        var entityRole = await _context.Roles
+            .FirstOrDefaultAsync(e => e.RoleId == tokenRoleId)
+            ?? throw new KeyNotFoundException("Role Not Found");
+
+        if (entityRole.RoleName != "Manager")
+        {
+            var entityUserPermission = await _context.UserPermissions
+                .FirstOrDefaultAsync(e => e.UserId == tokenUserId && e.Permission.PermissionName == PermissionTableName && !e.IsDeleted);
+
+            if (entityUserPermission != null)
+            {
+                if (!entityUserPermission.Bit)
+                {
+                    throw new UnauthorizedAccessException("This User Does Not Have Access Permission");
+                }
+            }
+            else
+            {
+                var entityRolePermission = await _context.RolePermissions
+                    .AnyAsync(e => e.RoleId == tokenRoleId && e.Permission.PermissionName == PermissionTableName && !e.IsDeleted);
+
+                if (!entityRolePermission)
+                {
+                    throw new UnauthorizedAccessException("This User Does Not Have Access Permission");
+                }
+            }
+        }
     }
 }

@@ -16,11 +16,13 @@ public class UserPermissionController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public UserPermissionController(ProjectManagementSystemContext context, LogService logService)
+    public UserPermissionController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -144,7 +146,7 @@ public class UserPermissionController : ControllerBase
 
         if (dto.UserPermissionId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditUserPermission");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditUserPermission");
             entity = await _context.UserPermissions
                 .FirstOrDefaultAsync(e => e.UserPermissionId == dto.UserPermissionId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("User Permission ID Not Found");
@@ -184,7 +186,7 @@ public class UserPermissionController : ControllerBase
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddUserPermission");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddUserPermission");
             entity = new UserPermission
             {
                 UserPermissionId = Guid.NewGuid(),
@@ -241,7 +243,7 @@ public class UserPermissionController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteUserPermission");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteUserPermission");
 
         //////////////////////////////////////////////////////
 

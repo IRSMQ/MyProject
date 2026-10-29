@@ -20,12 +20,14 @@ public class UserController : ControllerBase
     private readonly TokenService _tokenService;
     private readonly PasswordHassherHandler _passwordHassherHandler;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService1;
 
     public UserController(
         ProjectManagementSystemContext context,
         TokenService tokenService,
         PasswordHassherHandler passwordHassherHandler,
-        LogService logService)
+        LogService logService
+        )
     {
         _context = context;
         _tokenService = tokenService;
@@ -91,7 +93,7 @@ public class UserController : ControllerBase
 
         if (dto.UserId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId,tokenRoleId, "EditUser");
+            await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditUser");
 
 
             entity = await _context.Users
@@ -158,7 +160,7 @@ public class UserController : ControllerBase
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddUser");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddUser");
             if (string.IsNullOrEmpty(dto.Username) || string.IsNullOrEmpty(dto.UserFullName) || string.IsNullOrEmpty(dto.UserPassword))
                 throw new ArgumentException("Username or User FullName or Password is NULL");
 
@@ -237,7 +239,7 @@ public class UserController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditStatusUser");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditStatusUser");
 
         //////////////////////////////////////////////////////
         
@@ -278,7 +280,7 @@ public class UserController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteUser");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteUser");
 
         //////////////////////////////////////////////////////
         

@@ -15,10 +15,12 @@ public class PriorityController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    public PriorityController(ProjectManagementSystemContext context, LogService logService)
+    private readonly TokenService _tokenService;
+    public PriorityController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -80,7 +82,7 @@ public class PriorityController : ControllerBase
 
         if (dto.PriorityId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditPriority");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditPriority");
             entity = await _context.Priorities
                 .FirstOrDefaultAsync(e => e.PriorityId == dto.PriorityId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Priority Not Found");
@@ -106,7 +108,7 @@ public class PriorityController : ControllerBase
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddPriority");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddPriority");
             entity = new Priority
             {
                 PriorityId = Guid.NewGuid(),
@@ -146,7 +148,7 @@ public class PriorityController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeletePtiotity");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeletePtiotity");
 
         //////////////////////////////////////////////////////
         

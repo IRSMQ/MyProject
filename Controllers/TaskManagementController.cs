@@ -17,11 +17,13 @@ public class TaskManagementController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public TaskManagementController(ProjectManagementSystemContext context, LogService logService)
+    public TaskManagementController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -89,7 +91,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditStatusTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditStatusTaskManagement");
 
         //////////////////////////////////////////////////////
         
@@ -140,7 +142,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditPriorityTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditPriorityTaskManagement");
 
         //////////////////////////////////////////////////////
         
@@ -184,7 +186,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditParentTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditParentTaskManagement");
 
         //////////////////////////////////////////////////////
         
@@ -262,7 +264,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditTitleTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditTitleTaskManagement");
 
         //////////////////////////////////////////////////////
         
@@ -315,7 +317,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDescTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditDescTaskManagement");
 
         //////////////////////////////////////////////////////
         
@@ -355,7 +357,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDateTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditDateTaskManagement");
 
         //////////////////////////////////////////////////////
         
@@ -478,7 +480,7 @@ public class TaskManagementController : ControllerBase
 
         if (!dto.TaskId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddTaskManagement");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddTaskManagement");
             if (dto.ParentId.HasValue)
             {
                 var entityTaskManagement = await _context.TaskManagements
@@ -581,7 +583,7 @@ public class TaskManagementController : ControllerBase
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditTaskManagement");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditTaskManagement");
             entity = await _context.TaskManagements
                 .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Task Not Found");
@@ -721,7 +723,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteTaskManagement");
 
         //////////////////////////////////////////////////////
         

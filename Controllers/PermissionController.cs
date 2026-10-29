@@ -15,10 +15,12 @@ public class PermissionController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    public PermissionController(ProjectManagementSystemContext context, LogService logService)
+    private readonly TokenService _tokenService;
+    public PermissionController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -82,7 +84,7 @@ public class PermissionController : ControllerBase
 
         if (dto.PermissionId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditPermission");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditPermission");
 
             entity = await _context.Permissions
                 .FirstOrDefaultAsync(e => e.PermissionId == dto.PermissionId && !e.IsDeleted)
@@ -109,7 +111,7 @@ public class PermissionController : ControllerBase
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddPermission");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddPermission");
             entity = new Permission
             {
                 PermissionId = Guid.NewGuid(),
@@ -156,7 +158,7 @@ public class PermissionController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeletePermission");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeletePermission");
 
         //////////////////////////////////////////////////////
         

@@ -16,11 +16,13 @@ public class StatusController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public StatusController(ProjectManagementSystemContext context, LogService logService)
+    public StatusController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -82,7 +84,7 @@ public class StatusController : ControllerBase
 
         if (dto.StatusId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditStatus");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditStatus");
             entity = await _context.Statuses
                 .FirstOrDefaultAsync(p => p.StatusId == dto.StatusId && !p.IsDeleted)
                 ?? throw new KeyNotFoundException($"Status Not Found");
@@ -108,7 +110,7 @@ public class StatusController : ControllerBase
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddStatus");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddStatus");
             entity = new Status
             {
                 StatusId = Guid.NewGuid(),
@@ -163,7 +165,7 @@ public class StatusController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteStatus");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteStatus");
 
         //////////////////////////////////////////////////////
         

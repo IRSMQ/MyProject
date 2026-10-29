@@ -14,11 +14,13 @@ public class ProjectController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public ProjectController(ProjectManagementSystemContext context, LogService logService)
+    public ProjectController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -110,7 +112,7 @@ public class ProjectController : ControllerBase
 
         if (dto.ProjectId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditProject");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditProject");
             if (dto.Nullable)
             {
                 entity.ManagerId = dto.ManagerId;
@@ -125,7 +127,7 @@ public class ProjectController : ControllerBase
                     .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
                     ?? throw new KeyNotFoundException("Manager Not Found");
 
-                await _logService.CheckToken(entityUser.UserId, entityUser.RoleId, "ProjectManager");
+                await _tokenService.CheckToken(entityUser.UserId, entityUser.RoleId, "ProjectManager");
 
                 entity.ManagerId = dto.ManagerId.Value;
             }
@@ -181,7 +183,7 @@ public class ProjectController : ControllerBase
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddProject");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddProject");
 
             if (dto.ManagerId.HasValue)
             {
@@ -286,7 +288,7 @@ public class ProjectController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDateProject");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditDateProject");
 
         //////////////////////////////////////////////////////
         
@@ -396,7 +398,7 @@ public class ProjectController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteProject");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteProject");
 
         //////////////////////////////////////////////////////
         

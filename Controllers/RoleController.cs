@@ -16,11 +16,13 @@ public class RoleController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public RoleController(ProjectManagementSystemContext context, LogService logService)
+    public RoleController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -83,7 +85,7 @@ public class RoleController : ControllerBase
 
         if (dto.RoleId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditRole");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditRole");
             entity = await _context.Roles
                 .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Role with this ID not found");
@@ -109,7 +111,7 @@ public class RoleController : ControllerBase
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddRole");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddRole");
             entity = new Role
             {
                 RoleId = Guid.NewGuid(),
@@ -165,7 +167,7 @@ public class RoleController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteRole");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteRole");
 
         //////////////////////////////////////////////////////
         

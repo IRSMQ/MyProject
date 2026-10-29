@@ -16,11 +16,13 @@ public class RolePermissionController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public RolePermissionController(ProjectManagementSystemContext context, LogService logService)
+    public RolePermissionController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -138,7 +140,7 @@ public class RolePermissionController : ControllerBase
 
         if (dto.RPID.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditRolePermission");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditRolePermission");
             var entityRole = await _context.Roles
                 .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Role Not Found");
@@ -177,7 +179,7 @@ public class RolePermissionController : ControllerBase
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddRolePermission");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddRolePermission");
             var RoleEntity = await _context.Roles
                 .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Role Not Found");
@@ -249,7 +251,7 @@ public class RolePermissionController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteRolePermission");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteRolePermission");
 
         //////////////////////////////////////////////////////
         

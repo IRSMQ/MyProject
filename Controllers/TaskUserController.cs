@@ -17,11 +17,13 @@ public class TaskUserController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public TaskUserController(ProjectManagementSystemContext context, LogService logService)
+    public TaskUserController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -150,7 +152,7 @@ public class TaskUserController : ControllerBase
 
         if (dto.TaskUserId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditTaskUser");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditTaskUser");
 
             entity = await _context.TaskUsers
                 .FirstOrDefaultAsync(e => e.TaskUserId == dto.TaskUserId && !e.IsDeleted)
@@ -201,7 +203,7 @@ public class TaskUserController : ControllerBase
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddTaskUser");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddTaskUser");
 
             bool check = true;
 
@@ -266,7 +268,7 @@ public class TaskUserController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteTaskUser");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteTaskUser");
 
         //////////////////////////////////////////////////////
         

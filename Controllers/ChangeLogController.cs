@@ -18,11 +18,13 @@ public class ChangeLogController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public ChangeLogController(ProjectManagementSystemContext context, LogService logService)
+    public ChangeLogController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -102,7 +104,7 @@ public class ChangeLogController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteChangeLog");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteChangeLog");
 
         //////////////////////////////////////////////////////
         
