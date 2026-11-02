@@ -62,7 +62,7 @@ public class LogService
         }
     }
 
-    public async Task ChangLog(Guid logID, string oldValue, string newValue, string columnName)
+    private async Task ChangLog(Guid logID, string oldValue, string newValue, string columnName)
     {
         var ncl = new ChangeLog
         {

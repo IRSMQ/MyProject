@@ -106,9 +106,8 @@ public class ProjectController : ControllerBase
             .FirstOrDefaultAsync(e => e.ProjectName == dto.ProjectName && !e.IsDeleted);
 
         if (entity != null)
-            throw new ArgumentException("Project already exists.");        
+            throw new ArgumentException("Project already exists.");
 
-        entity = new Project();
         string message = string.Empty;
         string textLog = string.Empty;
 

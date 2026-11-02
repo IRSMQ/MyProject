@@ -142,51 +142,36 @@ public class UserPermissionController : ControllerBase
             ?? throw new KeyNotFoundException("User Not Found");
 
 
-        string text;
+        string message = string.Empty;
+        string text = string.Empty;
 
         if (dto.UserPermissionId.HasValue)
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditUserPermission");
+            
             entity = await _context.UserPermissions
                 .FirstOrDefaultAsync(e => e.UserPermissionId == dto.UserPermissionId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("User Permission ID Not Found");
 
             if (entity.PermissionId == dto.PermissionId && entity.UserId == dto.UserId)
             {
-                text = "User Permission Exist";
+                message = "User Permission Exist";
             }
             else
             {
-                var logId = await _logService.Log("Edit",nameof(UserPermission), dto.UserPermissionId.Value);
-
-                if (entity.PermissionId != dto.PermissionId && dto.PermissionId.HasValue)
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        entity.PermissionId.ToString(),
-                        dto.PermissionId.ToString(),
-                        nameof(entity.PermissionId)
-                    );
-                    entity.PermissionId = dto.PermissionId.Value;
-                }
-
                 if (entity.UserId != dto.UserId && dto.UserId.HasValue)
                 {
-                    await _logService.ChangLog(
-                        logId,
-                        entity.UserId.ToString(),
-                        dto.UserId.ToString(),
-                        nameof(entity.PermissionId)
-                    );
                     entity.UserId = dto.UserId.Value;
                 }
 
-                text = "Edit Succeeded";
+                message = "Edit Succeeded";
+                text = "Edit";
             }
         }
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddUserPermission");
+
             entity = new UserPermission
             {
                 UserPermissionId = Guid.NewGuid(),
@@ -194,25 +179,10 @@ public class UserPermissionController : ControllerBase
                 UserId = dto.UserId.Value
             };
 
-            var logId = await _logService.Log("Create", nameof(UserPermission), entity.UserPermissionId);
-
-            await _logService.ChangLog(
-                logId,
-                "null",
-                entity.UserId.ToString(),
-                nameof(entity.UserId)
-            );
-
-            await _logService.ChangLog(
-                logId,
-                "null",
-                entity.PermissionId.ToString(),
-                nameof(entity.UserPermissionId)
-            );
-            
-
             await _context.UserPermissions.AddAsync(entity);
-            text = "Add Succeeded";
+
+            message = "Add Succeeded";
+            text = "Create";
         }
 
         var entityDto = new UserPermissionDto
@@ -224,9 +194,13 @@ public class UserPermissionController : ControllerBase
             PermissionName = entityPermission.PermissionName
         };
 
+        var entry = _context.Entry(entity);
+
+        await _logService.Log(text, nameof(UserPermission), entity.UserPermissionId, entry);
+
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<UserPermissionDto>.Success(entityDto,$"{text}"));
+        return Ok(ApiResponse<UserPermissionDto>.Success(entityDto,$"{message}"));
     }
 
     [Authorize]
@@ -247,14 +221,13 @@ public class UserPermissionController : ControllerBase
 
         //////////////////////////////////////////////////////
 
-
         var entity = await _context.UserPermissions
             .FirstOrDefaultAsync(e => e.UserPermissionId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User Permission Not Found");
 
         entity.IsDeleted = true;
 
-        await _logService.Log("delete", nameof(UserPermission), entity.UserPermissionId);
+        await _logService.Log("Delete", nameof(UserPermission), entity.UserPermissionId);
 
         var newTU = new UserPermissionDto
         {

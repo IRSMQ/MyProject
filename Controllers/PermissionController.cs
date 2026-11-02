@@ -77,7 +77,7 @@ public class PermissionController : ControllerBase
         var entity = await _context.Permissions
             .FirstOrDefaultAsync(e => e.PermissionName == dto.PermissionName && !e.IsDeleted);
 
-        string message;
+        string message = string.Empty;
         string textLog = string.Empty;
 
         if (entity != null)
@@ -126,6 +126,7 @@ public class PermissionController : ControllerBase
         };
 
         var entry = _context.Permissions.Entry(entity);
+
         await _logService.Log(textLog, nameof(Permission), entity.PermissionId, entry);
 
         await _context.SaveChangesAsync();

@@ -128,19 +128,19 @@ public class TaskUserController : ControllerBase
 
         //////////////////////////////////////////////////////
         
-        var entity = await _context.TaskUsers
+        TaskUser? entity = await _context.TaskUsers
             .FirstOrDefaultAsync(e => e.TaskId == dto.TaskId && e.UserId == dto.UserId && !e.IsDeleted);
 
         if (entity != null)
             throw new ArgumentException("Task User Exist");
 
-        var entityTaskManagements = await _context.TaskManagements
-            .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskId && !e.IsDeleted)
-            ?? throw new KeyNotFoundException("Task Not Found");
+        // var entityTaskManagements = await _context.TaskManagements
+        //     .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskId && !e.IsDeleted)
+        //     ?? throw new KeyNotFoundException("Task Not Found");
 
-        var entityUser = await _context.Users
-            .FirstOrDefaultAsync(e => e.UserId == dto.UserId && !e.IsDeleted)
-            ?? throw new KeyNotFoundException("User Not Found");
+        // var entityUser = await _context.Users
+        //     .FirstOrDefaultAsync(e => e.UserId == dto.UserId && !e.IsDeleted)
+        //     ?? throw new KeyNotFoundException("User Not Found");
 
         var entityUserProject = await _context.UserProjects
             .Where(e => e.UserId == dto.UserId)
@@ -148,7 +148,8 @@ public class TaskUserController : ControllerBase
 
 
         var tud = new TaskUserDto();
-        string text;
+        string message = string.Empty;
+        string text = string.Empty;
 
         if (dto.TaskUserId.HasValue)
         {
@@ -158,40 +159,24 @@ public class TaskUserController : ControllerBase
                 .FirstOrDefaultAsync(e => e.TaskUserId == dto.TaskUserId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Task User ID Not Found");
 
-            bool check = true;
+            // bool check = true;
 
-            foreach (var e in entityUserProject)
-            {
-                if (e.ProjectId == entityTaskManagements.ProjectId)
-                    check = false;
-            }
+            // foreach (var e in entityUserProject)
+            // {
+            //     if (e.ProjectId == entityTaskManagements.ProjectId)
+            //         check = false;
+            // }
 
-            if (check)
-                throw new ArgumentException("This User Is Not In This Project");
-
-
-
-            var logId = await _logService.Log("Edit", nameof(TaskUser), dto.TaskUserId.Value);
+            // if (check)
+            //     throw new ArgumentException("This User Is Not In This Project");
 
             if (entity.TaskId != dto.TaskId && dto.TaskId.HasValue)
             {
-                await _logService.ChangLog(
-                    logId,
-                    entity.TaskId.ToString(),
-                    dto.TaskId.ToString(),
-                    nameof(entity.TaskId)
-                );
                 entity.TaskId = dto.TaskId.Value;
             }
 
             if (entity.UserId != dto.UserId && dto.UserId.HasValue)
             {
-                await _logService.ChangLog(
-                    logId,
-                    entity.UserId.ToString(),
-                    dto.UserId.ToString(),
-                    nameof(entity.TaskId)
-                );
                 entity.UserId = dto.UserId.Value;
             }
 
@@ -199,59 +184,48 @@ public class TaskUserController : ControllerBase
             tud.UserId = entity.UserId;
             tud.TaskName = entity.Task.Title;
             tud.UserName = entity.User.UserFullName;
-            text = "Edit Succeeded";
+            message = "Edit Succeeded";
+            text = "Edit";
         }
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddTaskUser");
 
-            bool check = true;
+            // bool check = true;
 
-            foreach (var e in entityUserProject)
-            {
-                if (e.ProjectId == entityTaskManagements.ProjectId)
-                    check = false;
-            }
+            // foreach (var e in entityUserProject)
+            // {
+            //     if (e.ProjectId == entityTaskManagements.ProjectId)
+            //         check = false;
+            // }
 
-            if (check)
-                throw new ArgumentException("This User Is Not In This Project");
+            // if (check)
+            //     throw new ArgumentException("This User Is Not In This Project");
 
-            var newTU = new TaskUser
+            entity = new TaskUser
             {
                 TaskUserId = Guid.NewGuid(),
                 TaskId = dto.TaskId.Value,
                 UserId = dto.UserId.Value
             };
 
-            await _context.TaskUsers.AddAsync(newTU);
-            
-            var entry = _context.Entry(newTU);
+            await _context.TaskUsers.AddAsync(entity);
 
-            var logId = await _logService.Log("Create", nameof(TaskUser), newTU.TaskUserId);
-
-            foreach (var prop in entry.Properties)
-            {
-                if (prop.Metadata.Name != "IsDeleted")
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        "null",
-                        prop.CurrentValue?.ToString() ?? "null",
-                        prop.Metadata.Name
-                    );
-                }
-            }
-
-            tud.TaskId = newTU.TaskId;
-            tud.UserId = newTU.UserId;
-            tud.TaskName = newTU.Task.Title;
-            tud.UserName = newTU.User.UserFullName;
-            text = "Add Succeeded";
+            tud.TaskId = entity.TaskId;
+            tud.UserId = entity.UserId;
+            tud.TaskName = entity.Task.Title;
+            tud.UserName = entity.User.UserFullName;
+            message = "Add Succeeded";
+            text = "Create";
         }
+
+        var entry = _context.Entry(entity);
+
+        await _logService.Log(text, nameof(TaskUser), entity.TaskUserId, entry);
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<TaskUserDto>.Success(tud,$"{text}"));
+        return Ok(ApiResponse<TaskUserDto>.Success(tud,$"{message}"));
     }
 
     [Authorize]
@@ -278,7 +252,7 @@ public class TaskUserController : ControllerBase
 
         entity.IsDeleted = true;
 
-        await _logService.Log("delete", nameof(TaskUser), entity.TaskUserId);
+        await _logService.Log("Delete", nameof(TaskUser), entity.TaskUserId);
 
         var newTU = new TaskUserDto
         {

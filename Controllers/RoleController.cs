@@ -165,7 +165,7 @@ public class RoleController : ControllerBase
         {
             e.RoleId = null;
             var entry = _context.Users.Entry(e);
-            await _logService.Log("Edit", nameof(User), e.UserId, entry);
+            await _logService.Log("Edit", nameof(Models.User), e.UserId, entry);
         }
 
 

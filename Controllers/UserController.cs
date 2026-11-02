@@ -71,7 +71,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPut]
-    public async Task<IActionResult> SIgnUp([FromBody] UserAddDto dto)
+    public async Task<IActionResult> SignUp([FromBody] UserAddDto dto)
     {   
 
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
@@ -89,12 +89,12 @@ public class UserController : ControllerBase
         if (entity != null)
             throw new ArgumentException("Username already exists");
 
-        string text;
+        string message = string.Empty;
+        string text = string.Empty;
 
         if (dto.UserId.HasValue)
         {
             await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditUser");
-
 
             entity = await _context.Users
                 .FirstOrDefaultAsync(e => e.UserId == dto.UserId && !e.IsDeleted)
@@ -129,75 +129,38 @@ public class UserController : ControllerBase
             if (!string.IsNullOrEmpty(dto.UserPassword) && entity.UserPassword != _passwordHassherHandler.Hash(dto.UserPassword))
                 entity.UserPassword = _passwordHassherHandler.Hash(dto.UserPassword);
             
-
-            var entry = _context.Entry(entity);
-
-            var modifiedProps = entry.Properties
-                .Where(e => e.IsModified)
-                .Select(e => new
-                {
-                    ColumnName = e.Metadata.Name,
-                    OldVal = e.OriginalValue?.ToString() ?? "null",
-                    NewVal = e.CurrentValue?.ToString() ?? "null"
-                })
-                .ToList();
-
-            if (modifiedProps.Any())
-            {
-                var logId = await _logService.Log("Edit", nameof(Models.User), entity.UserId);
-
-                foreach (var prop in modifiedProps)
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        prop.OldVal,
-                        prop.NewVal,
-                        prop.ColumnName
-                    );
-                }
-            }
-            text = "Edit Succeeded";
+            message = "Edit Succeeded";
+            text = "Edit";
         }
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddUser");
-            if (string.IsNullOrEmpty(dto.Username) || string.IsNullOrEmpty(dto.UserFullName) || string.IsNullOrEmpty(dto.UserPassword))
-                throw new ArgumentException("Username or User FullName or Password is NULL");
+            
+            // if (string.IsNullOrEmpty(dto.Username) || string.IsNullOrEmpty(dto.UserFullName) || string.IsNullOrEmpty(dto.UserPassword))
+            //     throw new ArgumentException("Username or User FullName or Password is NULL");
 
             entity = new User
             {
                 UserId = Guid.NewGuid(),
                 RoleId = dto.RoleId,
-                UserFullName = dto.UserFullName,
-                Username = dto.Username,
-                UserPassword = _passwordHassherHandler.Hash(dto.UserPassword),
+                UserFullName = dto.UserFullName!,
+                Username = dto.Username!,
+                UserPassword = _passwordHassherHandler.Hash(dto.UserPassword!),
                 UserEmail = dto.UserEmail,
                 UserPhone = dto.UserPhone
             };
 
-            await _context.Users.AddAsync(entity);
-
-            var logId = await _logService.Log("Create", nameof(Models.User), entity.UserId);
-
-            var entry = _context.Entry(entity);
-            foreach (var prop in entry.Properties)
-            {
-                if (prop.Metadata.Name != "IsDelete")
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        "null",
-                        prop.CurrentValue?.ToString() ?? "null",
-                        prop.Metadata.Name
-                    );
-                }
-            }
-            text = "Add Succeeded";
+            message = "Add Succeeded";
+            text = "Create";
         }
+
+        var entry = _context.Entry(entity);
+
+        await _logService.Log(text, nameof(Models.User), entity.UserId, entry);
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<UserDto>.Success(UserToDto(entity), $"{text}"));
+        return Ok(ApiResponse<UserDto>.Success(UserToDto(entity), $"{message}"));
     }
 
     [HttpPost]
@@ -249,17 +212,12 @@ public class UserController : ControllerBase
 
         if (entity.UserStatus != dto.Status)
         {
-            var logId = await _logService.Log("Edit", nameof(Models.User), entity.UserId);
-
-            await _logService.ChangLog(
-                logId,
-                entity.UserStatus.ToString(),
-                dto.Status.ToString(),
-                nameof(entity.UserStatus)
-            );
-            
             entity.UserStatus = dto.Status;
         }
+
+        var entry = _context.Entry(entity);
+
+        await _logService.Log("Edit", nameof(Models.User), entity.UserId, entry);
 
         await _context.SaveChangesAsync();
 

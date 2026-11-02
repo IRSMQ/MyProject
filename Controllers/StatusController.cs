@@ -88,7 +88,7 @@ public class StatusController : ControllerBase
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditStatus");
 
             entity = await _context.Statuses
-                .FirstOrDefaultAsync(p => p.StatusId == dto.StatusId && !p.IsDeleted)
+                .FirstOrDefaultAsync(e => e.StatusId == dto.StatusId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException($"Status Not Found");
 
             if (entity.StatusName == dto.StatusName)
@@ -105,6 +105,7 @@ public class StatusController : ControllerBase
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddStatus");
+            
             entity = new Status
             {
                 StatusId = Guid.NewGuid(),

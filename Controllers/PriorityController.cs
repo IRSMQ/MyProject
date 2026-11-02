@@ -78,7 +78,7 @@ public class PriorityController : ControllerBase
         if (entity != null)
             throw new ArgumentException("Priority already exists.");
 
-        string message;
+        string message = string.Empty;
         string textLog = string.Empty;
 
         if (dto.PriorityId.HasValue)

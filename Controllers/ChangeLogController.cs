@@ -114,7 +114,7 @@ public class ChangeLogController : ControllerBase
 
         entity.IsDeleted = true;
 
-        await _logService.Log("Delete", nameof(ChangeLog), id);
+        await _logService.Log("Delete", nameof(ChangeLog), entity.ChangeLogId);
 
         var newEntity = new ChangeLogDto
         {
