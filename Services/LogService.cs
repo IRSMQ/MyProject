@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Test26.Context;
 // using Test26.Exception;
 
@@ -19,7 +20,7 @@ public class LogService
         _httpContextAccessor = IHTTP;
     }
 
-    public async Task<Guid> Log(string logTypeName, string tableName, Guid relatedId)
+    public async Task Log(string logTypeName, string tableName, Guid relatedId, EntityEntry? entry = null)
     {
         
         var userIdClaim = _httpContextAccessor.HttpContext?.User
@@ -43,10 +44,44 @@ public class LogService
         };
 
         await _context.Logs.AddAsync(newLog);
-        return logId;
+
+        if (entry != null)
+        {
+            foreach (var prop in entry.Properties)
+            {
+                if (prop.Metadata.Name == "IsDeleted")
+                    continue;
+
+                if (entry.State == EntityState.Added)
+                {
+                    if (prop.CurrentValue != null)
+                    {
+                        await ChangLog(
+                            logId,
+                            "null",
+                            prop.CurrentValue?.ToString() ?? "null",
+                            prop.Metadata.Name
+                        );
+                    }
+                }
+                else if (entry.State == EntityState.Modified)
+                {
+                    if (prop.OriginalValue?.ToString() != prop.CurrentValue?.ToString())
+                    {
+                        await ChangLog
+                        (
+                            logId,
+                            prop.OriginalValue?.ToString() ?? "null",
+                            prop.CurrentValue?.ToString() ?? "null",
+                            prop.Metadata.Name
+                        );
+                    }
+                }
+            }
+        }
     }
 
-    public async Task ChangLog(Guid logID, string oldValue, string newValue, string columnName)
+    private async Task ChangLog(Guid logID, string oldValue, string newValue, string columnName)
     {
         var ncl = new ChangeLog
         {
@@ -57,65 +92,5 @@ public class LogService
         };
         
         await _context.ChangeLogs.AddAsync(ncl);
-    }
-
-    public async Task<bool> CheckToken(Guid tokenUserId, Guid? tokenRoleId, string PermissionTableName){
-
-        if (string.IsNullOrEmpty(tokenRoleId.ToString()))
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        var entityRole = await _context.Roles
-            .FirstOrDefaultAsync(e => e.RoleId == tokenRoleId)
-            ?? throw new KeyNotFoundException("Role Not Found");
-
-        if (entityRole.RoleName != "Manager")
-        {
-            var entityRolePermission = await _context.RolePermissions
-                .Include(e => e.Permission)
-                .Where(e => e.RoleId == tokenRoleId && !e.IsDeleted)
-                .ToListAsync();
-
-            var entityUserPermission = await _context.UserPermissions
-                .Include(e => e.Permission)
-                .Where(e => e.UserId == tokenUserId && !e.IsDeleted)
-                .ToListAsync();
-
-            bool check1 = false;
-            string check2 = "null";
-
-            if (entityRolePermission.Count > 0)
-            {
-                foreach (var e in entityRolePermission)
-                {
-                    if (e.Permission.PermissionName == PermissionTableName)
-                        check1 = true;
-                }
-            }
-
-            if (entityUserPermission.Count() > 0)
-            {
-                foreach (var e in entityUserPermission)
-                {
-                    if (e.Permission.PermissionName == PermissionTableName)
-                    {
-                        check2 = e.Bit.ToString();
-                    }
-                }
-            }
-
-            if (check2 == "null")
-                if (check1)
-                    return true;
-                else throw new UnauthorizedAccessException("This user does not have this level of access");
-
-            else
-                if (check2 == "true")
-                    return true;
-                else throw new UnauthorizedAccessException("This user does not have this level of access");
-        }
-        else
-        {
-            return true;
-        }
     }
 }

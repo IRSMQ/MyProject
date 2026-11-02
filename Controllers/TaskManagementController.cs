@@ -17,11 +17,13 @@ public class TaskManagementController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public TaskManagementController(ProjectManagementSystemContext context, LogService logService)
+    public TaskManagementController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -32,6 +34,8 @@ public class TaskManagementController : ControllerBase
             .Include(e => e.Status)
             .Include(e => e.Priority)
             .Include(e => e.Parent)
+            // .Include(e => e.TaskDocuments)
+            //     .ThenInclude(e => e.Document)
             .Where(e => !e.IsDeleted)
             .Select(e => new TaskManagementDto
             {
@@ -51,7 +55,23 @@ public class TaskManagementController : ControllerBase
                 CreationDate = e.CreationDate,
                 StartDate = e.StartDate,
                 DueDate = e.DueDate,
-                CompletionDate = e.CompletionDate
+                CompletionDate = e.CompletionDate,
+
+                Documents = e.TaskDocuments
+                    .Where(t => t.Task.TaskManagementId == e.TaskManagementId)
+                    .Select(t => new DocumentDto
+                    {
+                        DocumentId = t.Document.DocumentId,
+                        FileName = t.Document.FileName
+                    }).ToList(),
+
+                Users = e.TaskUsers
+                    .Where(t => t.Task.TaskManagementId == e.TaskManagementId)
+                    .Select(t => new UserDto
+                    {
+                        UserId = t.User.UserId,
+                        UserFullName = t.User.UserFullName
+                    }).ToList()
             })
             .ToListAsync();
 
@@ -77,7 +97,7 @@ public class TaskManagementController : ControllerBase
 
     [Authorize]
     [HttpPatch]
-    public async Task<IActionResult> Status([FromQuery] TaskEditObject dto)
+    public async Task<IActionResult> Status([FromBody] TaskEditObject dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -89,7 +109,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditStatusTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditStatusTaskManagement");
 
         //////////////////////////////////////////////////////
         
@@ -110,16 +130,11 @@ public class TaskManagementController : ControllerBase
         if (entity.Project != null && entity.Project.StatusId != null && entity.Project.StatusId == Guid.Parse("DB303C22-BB2F-438A-BDE0-401CFCA15B5C") && dto.ObjectId == Guid.Parse("8569E5B3-46BD-4070-BCC2-18AB1DC94F26"))
             throw new ArgumentException("When Project Complete, can't edit Task Status into InProgress");
 
-        var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
-
-        await _logService.ChangLog(
-            logId,
-            entity.Status?.ToString() ?? "null",
-            dto.ObjectId?.ToString() ?? "null",
-            nameof(entity.Desc)
-        );
-
         entity.StatusId = dto.ObjectId;
+
+
+
+        await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
 
         await _context.SaveChangesAsync();
 
@@ -128,7 +143,7 @@ public class TaskManagementController : ControllerBase
 
     [Authorize]
     [HttpPatch]
-    public async Task<IActionResult> Priority([FromQuery] TaskEditObject dto)
+    public async Task<IActionResult> Priority([FromBody] TaskEditObject dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -140,7 +155,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditPriorityTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditPriorityTaskManagement");
 
         //////////////////////////////////////////////////////
         
@@ -154,16 +169,11 @@ public class TaskManagementController : ControllerBase
         if (!exist)
             throw new KeyNotFoundException("Priority Not Found");
 
-        var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
-
-        await _logService.ChangLog(
-            logId,
-            entity.PriorityId?.ToString() ?? "null",
-            dto.ObjectId?.ToString() ?? "null",
-            nameof(entity.PriorityId)
-        );
-
         entity.PriorityId = dto.ObjectId;
+
+        var entry = _context.Entry(entity);
+
+        await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId, entry);
 
         await _context.SaveChangesAsync();
 
@@ -172,7 +182,7 @@ public class TaskManagementController : ControllerBase
 
     [Authorize]
     [HttpPatch]
-    public async Task<IActionResult> Parent([FromQuery] TMEPDto dto)
+    public async Task<IActionResult> Parent([FromBody] TMEPDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -184,7 +194,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditParentTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditParentTaskManagement");
 
         //////////////////////////////////////////////////////
         
@@ -218,8 +228,8 @@ public class TaskManagementController : ControllerBase
                     throw new ArgumentException("Circular reference detected");
 
                 var parent = await _context.TaskManagements
-                    .Where(t => t.TaskManagementId == curentId.Value)
-                    .Select(t => t.ParentId)
+                    .Where(e => e.TaskManagementId == curentId.Value)
+                    .Select(e => e.ParentId)
                     .FirstOrDefaultAsync();
 
                 if (parent == null)
@@ -232,16 +242,11 @@ public class TaskManagementController : ControllerBase
             }
         }
 
-        var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
-
-        await _logService.ChangLog(
-            logId,
-            entity.ParentId?.ToString() ?? "null",
-            dto.ObjectId?.ToString() ?? "null",
-            nameof(entity.ParentId)
-        );
-
         entity.ParentId = dto.ObjectId;
+
+        var entry = _context.Entry(entity);
+
+        await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId, entry);
 
         await _context.SaveChangesAsync();
 
@@ -250,7 +255,7 @@ public class TaskManagementController : ControllerBase
 
     [Authorize]
     [HttpPatch]
-    public async Task<IActionResult> Title([FromQuery] EditString editString)
+    public async Task<IActionResult> Title([FromBody] EditString editString)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -262,7 +267,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditTitleTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditTitleTaskManagement");
 
         //////////////////////////////////////////////////////
         
@@ -285,16 +290,11 @@ public class TaskManagementController : ControllerBase
                 throw new ArgumentException("This name is a duplicate within this project and task");
         }
 
-        var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
-
-        await _logService.ChangLog(
-            logId,
-            entity.Title?.ToString() ?? "null",
-            editString.Text?.ToString() ?? "null",
-            nameof(entity.Title)
-        );
-
         entity.Title = editString.Text;
+
+        var entry = _context.Entry(entity);
+
+        await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId, entry);
 
         await _context.SaveChangesAsync();
 
@@ -303,7 +303,7 @@ public class TaskManagementController : ControllerBase
 
     [Authorize]
     [HttpPatch]
-    public async Task<IActionResult> Desc([FromQuery] EditString editString)
+    public async Task<IActionResult> Desc([FromBody] EditString editString)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -315,26 +315,19 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDescTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditDescTaskManagement");
 
         //////////////////////////////////////////////////////
         
         var entity = await _context.TaskManagements
-            .FirstOrDefaultAsync(e => e.TaskManagementId == editString.TaskID && !e.IsDeleted);
-
-        if (entity == null)
-            throw new KeyNotFoundException("Task Not Found");
-
-        var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
-
-        await _logService.ChangLog(
-            logId,
-            entity.Desc?.ToString() ?? "null",
-            editString.Text?.ToString() ?? "null",
-            nameof(entity.Desc)
-        );
+            .FirstOrDefaultAsync(e => e.TaskManagementId == editString.TaskID && !e.IsDeleted)
+            ?? throw new KeyNotFoundException("Task Not Found");
 
         entity.Desc = editString.Text;
+
+        var entry = _context.Entry(entity);
+
+        await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId, entry);
 
         await _context.SaveChangesAsync();
 
@@ -343,7 +336,7 @@ public class TaskManagementController : ControllerBase
 
     [Authorize]
     [HttpPut]
-    public async Task<IActionResult> EditDate([FromQuery] EditDates editDate)
+    public async Task<IActionResult> EditDate([FromBody] EditDates dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -355,96 +348,86 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDateTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditDateTaskManagement");
 
         //////////////////////////////////////////////////////
         
         var entity = await _context.TaskManagements
-            .FirstOrDefaultAsync(e => e.TaskManagementId == editDate.ID && !e.IsDeleted);
+            .FirstOrDefaultAsync(e => e.TaskManagementId == dto.ID && !e.IsDeleted)
+            ?? throw new KeyNotFoundException("Task Not Found");
 
-        if (entity == null)
-            throw new KeyNotFoundException("Task Not Found");
+        // if (editDate.CreateDate.HasValue)
+        // {
+        //     if (entity.StartDate < editDate.CreateDate || entity.DueDate < editDate.CreateDate || entity.CompletionDate < editDate.CreateDate)
+        //         throw new ArgumentException("Creation/Start/Due Date > Date");
 
-        if (editDate.CreateDate.HasValue)
-        {
-            if (entity.StartDate < editDate.CreateDate || entity.DueDate < editDate.CreateDate || entity.CompletionDate < editDate.CreateDate)
-                throw new ArgumentException("Creation/Start/Due Date > Date");
+        //     var pr = await _context.Projects
+        //         .FirstOrDefaultAsync(e => e.ProjectId == entity.ProjectId && !e.IsDeleted);
 
-            var pr = await _context.Projects
-                .FirstOrDefaultAsync(e => e.ProjectId == entity.ProjectId && !e.IsDeleted);
+        //     if (pr == null)
+        //         throw new KeyNotFoundException("Project Not Found");
 
-            if (pr == null)
-                throw new KeyNotFoundException("Project Not Found");
+        //     if (pr.CreationDate > editDate.CreateDate)
+        //         throw new ArgumentException("Project Creation Date > Task Creation Date");
 
-            if (pr.CreationDate > editDate.CreateDate)
-                throw new ArgumentException("Project Creation Date > Task Creation Date");
+        //     entity.CreationDate = editDate.CreateDate.Value;
+        // }
 
-            entity.CreationDate = editDate.CreateDate.Value;
-        }
+        // if (editDate.StartDate.HasValue)
+        // {
+        //     if (entity.DueDate < editDate.StartDate || entity.CompletionDate < editDate.StartDate || entity.CreationDate > editDate.StartDate)
+        //         throw new ArgumentException("Completion/Due Date < Start Date or Creation Date > Start Date");
 
-        if (editDate.StartDate.HasValue)
-        {
-            if (entity.DueDate < editDate.StartDate || entity.CompletionDate < editDate.StartDate || entity.CreationDate > editDate.StartDate)
-                throw new ArgumentException("Completion/Due Date < Start Date or Creation Date > Start Date");
+        //     var pr = await _context.Projects
+        //         .FirstOrDefaultAsync(e => e.ProjectId == entity.ProjectId && !e.IsDeleted)
+        //         ?? throw new KeyNotFoundException("No Project was found for this Task");
 
-            var pr = await _context.Projects
-                .FirstOrDefaultAsync(e => e.ProjectId == entity.ProjectId && !e.IsDeleted)
-                ?? throw new KeyNotFoundException("No Project was found for this Task");
+        //     if (pr.StartDate > editDate.StartDate)
+        //         throw new ArgumentException("Start Date Project > Start Date Task");
 
-            if (pr.StartDate > editDate.StartDate)
-                throw new ArgumentException("Start Date Project > Start Date Task");
+        //     entity.StartDate = editDate.StartDate.Value;
+        // }
 
-            entity.StartDate = editDate.StartDate.Value;
-        }
+        // if (editDate.DueDate.HasValue)
+        // {
+        //     if (entity.StartDate > editDate.DueDate || entity.CreationDate > editDate.DueDate)
+        //         throw new ArgumentException("Creation/Start Date > Date");
 
-        if (editDate.DueDate.HasValue)
-        {
-            if (entity.StartDate > editDate.DueDate || entity.CreationDate > editDate.DueDate)
-                throw new ArgumentException("Creation/Start Date > Date");
+        //     entity.DueDate = editDate.DueDate.Value;
+        // }
 
-            entity.DueDate = editDate.DueDate.Value;
-        }
+        // if (editDate.EndDate.HasValue)
+        // {
+        //     if (entity.CreationDate > editDate.EndDate || entity.StartDate > editDate.EndDate)
+        //         throw new ArgumentException("Create/Start Date > End Date");
 
-        if (editDate.EndDate.HasValue)
-        {
-            if (entity.CreationDate > editDate.EndDate || entity.StartDate > editDate.EndDate)
-                throw new ArgumentException("Create/Start Date > End Date");
+        //     var pr = await _context.Projects
+        //         .FirstOrDefaultAsync(e => e.ProjectId == entity.ProjectId && !e.IsDeleted);
 
-            var pr = await _context.Projects
-                .FirstOrDefaultAsync(e => e.ProjectId == entity.ProjectId && !e.IsDeleted);
+        //     if (pr == null)
+        //         throw new ArgumentException("Project Not Found");
 
-            if (pr == null)
-                throw new ArgumentException("Project Not Found");
+        //     if (pr.EndDate < editDate.EndDate)
+        //         throw new ArgumentException("TM Completion Date > Project Completion Date");
 
-            if (pr.EndDate < editDate.EndDate)
-                throw new ArgumentException("TM Completion Date > Project Completion Date");
+        //     entity.CompletionDate = editDate.EndDate;
+        // }
 
-            entity.CompletionDate = editDate.EndDate;
-        }
+        if (dto.CreateDate.HasValue)
+            entity.CreationDate = dto.CreateDate;
+
+        if (dto.StartDate.HasValue)
+            entity.StartDate = dto.StartDate;
+
+        if (dto.DueDate.HasValue)
+            entity.DueDate = dto.DueDate;
+
+        if (dto.EndDate.HasValue)
+            entity.CompletionDate = dto.EndDate;
 
         var entiry = _context.TaskManagements.Entry(entity);
 
-        var modifiedProps = entiry.Properties
-            .Where(p => p.IsModified)
-            .Select(p => new
-            {
-                ColumnName = entiry.Metadata.Name,
-                OldVal = entiry.OriginalValues?.ToString() ?? "null",
-                NewVal = entiry.CurrentValues?.ToString() ?? "null"
-            })
-            .ToList();
-
-        if (modifiedProps.Any())
-        {
-            var tableName = _context.Model
-                .FindEntityType(typeof(TaskManagement))?
-                .GetTableName() ?? nameof(TaskManagement);
-
-            var logid = await _logService.Log("Edit", tableName, entity.TaskManagementId);
-
-            foreach (var m in modifiedProps)
-                await _logService.ChangLog(logid, m.OldVal, m.NewVal, m.ColumnName);
-        }
+        await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId, entiry);
         
         await _context.SaveChangesAsync();
 
@@ -452,8 +435,8 @@ public class TaskManagementController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost]
-    public async Task<IActionResult> Add([FromQuery] TMDtoAdd dto)
+    [HttpPut]
+    public async Task<IActionResult> Put([FromBody] TMDtoAdd dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -467,121 +450,15 @@ public class TaskManagementController : ControllerBase
 
         ////////////////////////////////////////////////////// 
 
-        var exist = await _context.TaskManagements
-            .AnyAsync(e => e.Title == dto.Title && e.ProjectId == dto.ProjectId && e.ParentId == dto.ParentId && !e.IsDeleted);
-
-        if (exist)
-            throw new ArgumentException("Task With this Title, Parent, Project Exist");
-
         var entity = new TaskManagement();
-        
+
+        string message = string.Empty;
+        string textLog = string.Empty;
 
         if (!dto.TaskId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddTaskManagement");
-            if (dto.ParentId.HasValue)
-            {
-                var entityTaskManagement = await _context.TaskManagements
-                    .FirstOrDefaultAsync(e => e.TaskManagementId == dto.ParentId && !e.IsDeleted)
-                    ?? throw new KeyNotFoundException("Parent Not Found");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditTaskManagement");
 
-                dto.ProjectId = entityTaskManagement.ProjectId;
-            }
-            else
-            {
-                if (dto.ProjectId.HasValue)
-                {
-                    var entityProject = await _context.Projects
-                        .FirstOrDefaultAsync(e => e.ProjectId == dto.ProjectId)
-                        ?? throw new KeyNotFoundException("Project Not Found");
-                }
-                else
-                    throw new ArgumentException("The project cannot be empty");
-            }
-
-            if (!dto.CreationDate.HasValue)
-                dto.CreationDate = DateTime.Now;
-
-            if (dto.EndDate.HasValue)
-            {
-                if (dto.StartDate.HasValue)
-                    if (dto.StartDate > dto.EndDate)
-                        throw new ArgumentException("Start Date > End Date");
-
-                else
-                    throw new ArgumentException("End Date Has Value And Start Date Empity");
-                
-                if (dto.CreationDate.HasValue)
-                    if (dto.CreationDate > dto.EndDate)
-                        throw new ArgumentException("Createion Date > End Date");
-
-                if (dto.DueDate.HasValue)
-                    if (dto.DueDate > dto.EndDate)
-                        throw new ArgumentException("Due Date > End Date");
-            }
-
-            if (dto.DueDate.HasValue)
-                if (dto.CreationDate > dto.DueDate)
-                    throw new ArgumentException("Creation Date > Due Date");
-
-            if (dto.StartDate.HasValue)
-                if (dto.CreationDate > dto.StartDate)
-                    throw new ArgumentException("Creation Date > Start Date");
-
-            if (dto.StatusId.HasValue)
-            {
-                var statusEntity = await _context.Statuses
-                    .FirstOrDefaultAsync(p => p.StatusId == dto.StatusId)
-                    ?? throw new KeyNotFoundException("Status Not Found");
-            }
-
-            if (dto.PriorityId.HasValue)
-            {
-                var entityPriority = await _context.Priorities
-                    .FirstOrDefaultAsync(p => p.PriorityId == dto.PriorityId)
-                    ?? throw new KeyNotFoundException("Priority Not Found");
-            }
-
-            Guid taskId = Guid.NewGuid();
-            var newTask = new TaskManagement
-        {
-            TaskManagementId = taskId,
-            ProjectId = dto.ProjectId.Value,
-            StatusId = dto.StatusId,
-            PriorityId = dto.PriorityId,
-            ParentId = dto.ParentId,
-            Title = dto.Title,
-            Desc = dto.Desc,
-            CreationDate = dto.CreationDate,
-            StartDate = dto.StartDate,
-            DueDate = dto.DueDate,
-            CompletionDate = dto.EndDate
-        };
-
-            await _context.TaskManagements.AddAsync(newTask);
-
-            var logId = await _logService.Log("Create",nameof(TaskManagement), taskId);
-
-            var entry = _context.Entry(newTask);
-
-            foreach (var prop in entry.Properties)
-            {
-                if (prop.OriginalValue != null && prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        "null",
-                        prop.CurrentValue?.ToString() ?? "null",
-                        prop.Metadata.Name
-                    );
-                }
-            }
-
-            entity = newTask;
-        }
-        else
-        {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditTaskManagement");
             entity = await _context.TaskManagements
                 .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Task Not Found");
@@ -591,16 +468,12 @@ public class TaskManagementController : ControllerBase
                 entity.StatusId = dto.StatusId;
                 entity.PriorityId = dto.PriorityId;
                 entity.ParentId = dto.ParentId;
-
                 entity.Desc = dto.Desc;
                 entity.CreationDate = dto.CreationDate;
                 entity.CompletionDate = dto.EndDate;
-
                 entity.DueDate = dto.DueDate;
                 entity.StartDate = dto.StartDate;
-            }
-
-            
+            }            
 
             if (dto.ParentId.HasValue)
             {
@@ -615,10 +488,6 @@ public class TaskManagementController : ControllerBase
             {
                 if (dto.ProjectId.HasValue)
                 {
-                    var entityProject = await _context.Projects
-                        .FirstOrDefaultAsync(e => e.ProjectId == dto.ProjectId)
-                        ?? throw new KeyNotFoundException("Project Not Found");
-                    
                     entity.ProjectId = dto.ProjectId.Value;
                 }
                 else
@@ -629,75 +498,75 @@ public class TaskManagementController : ControllerBase
                 entity.CreationDate = dto.CreationDate;
 
             if (dto.EndDate.HasValue)
-            {
-                if (entity.CreationDate > dto.EndDate)
-                    throw new ArgumentException("Createion Date > End Date");
-
                 entity.CompletionDate = dto.EndDate;
-            }
 
             if (dto.StartDate.HasValue)
-            {
-                if (entity.CreationDate > dto.StartDate || entity.CompletionDate < dto.StartDate)
-                    throw new ArgumentException("Creation Date > Start Date or End Date < Start Date");
-
                 entity.StartDate = dto.StartDate;
-            }
 
             if (dto.DueDate.HasValue)
-            {
-                if (entity.CreationDate > dto.DueDate)
-                    throw new ArgumentException("Creation Date > Due Date");
-
                 entity.DueDate = dto.DueDate;
-            }
 
             if (dto.StatusId.HasValue)
-            {
-                var entityStatus = await _context.Statuses
-                    .FirstOrDefaultAsync(e => e.StatusId == dto.StatusId)
-                    ?? throw new KeyNotFoundException("Status Not Found");
-
                 entity.StatusId = dto.StatusId;
-            }
 
             if (dto.PriorityId.HasValue)
-            {
-                var entityPriority = await _context.Priorities
-                    .FirstOrDefaultAsync(p => p.PriorityId == dto.PriorityId)
-                    ?? throw new KeyNotFoundException("Priority Not Found");
-
                 entity.PriorityId = dto.PriorityId;
-            }
 
             if (dto.Title != null)
-            {
                 entity.Title = dto.Title;
-            }
 
-            var logId = await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
-
-            var entiry = _context.Entry(entity);
-
-            var modifiedProps = entiry.Properties
-                .Where(e => e.IsModified)
-                .Select(e => new
-                {
-                    ColumnName = e.Metadata.Name,
-                    OldVal = e.OriginalValue?.ToString() ?? "null",
-                    NewVal = e.CurrentValue?.ToString() ?? "null"
-                })
-                .ToList();
-
-            foreach (var prop in modifiedProps)
+            message = "Edit Succeeded";
+            textLog = "Edit";
+            
+        }
+        else
+        {
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddTaskManagement");
+            
+            if (dto.ParentId.HasValue)
             {
-                await _logService.ChangLog(
-                    logId,
-                    prop.OldVal,
-                    prop.NewVal,
-                    prop.ColumnName
-                );
+                var entityTaskManagement = await _context.TaskManagements
+                    .FirstOrDefaultAsync(e => e.TaskManagementId == dto.ParentId && !e.IsDeleted)
+                    ?? throw new KeyNotFoundException("Parent Not Found");
+
+                dto.ProjectId = entityTaskManagement.ProjectId;
             }
+            else
+            {
+                if (dto.ProjectId.HasValue)
+                    entity.ProjectId = dto.ProjectId.Value;
+                else
+                    throw new ArgumentException("The project cannot be empty");
+            }
+
+            if (!dto.CreationDate.HasValue)
+                dto.CreationDate = DateTime.Now;
+
+            if (dto.EndDate.HasValue)
+                entity.CompletionDate = dto.EndDate;
+
+            if (dto.DueDate.HasValue)
+                entity.DueDate = dto.DueDate;
+
+            if (dto.StartDate.HasValue)
+                entity.StartDate = dto.StartDate;
+
+            if (dto.StatusId.HasValue)
+                entity.StatusId = dto.StatusId;
+
+            if (dto.PriorityId.HasValue)
+                entity.PriorityId = dto.PriorityId;
+
+            if (!string.IsNullOrEmpty(dto.Title))
+                entity.Title = dto.Title;
+
+            if (!string.IsNullOrEmpty(dto.Desc))
+                entity.Desc = dto.Desc;
+
+            await _context.TaskManagements.AddAsync(entity);
+
+            message = "Create Succeeded";
+            textLog = "Create";
         }
 
         var newEntity = TaskToDto(entity);
@@ -709,7 +578,7 @@ public class TaskManagementController : ControllerBase
 
     [Authorize]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -721,7 +590,7 @@ public class TaskManagementController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteTaskManagement");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteTaskManagement");
 
         //////////////////////////////////////////////////////
         
@@ -759,7 +628,7 @@ public class TaskManagementController : ControllerBase
             PriorityId = taskManagement.PriorityId,
             ParentId = taskManagement.ParentId,
 
-            ProjectName = taskManagement.Project?.ProjectName,
+            ProjectName = taskManagement.Project.ProjectName,
             StatusName = taskManagement.Status?.StatusName,
             PriorityName = taskManagement.Priority?.PriorityName,
             ParentName = taskManagement.Parent?.Title,

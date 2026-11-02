@@ -18,11 +18,13 @@ public class ChangeLogController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public ChangeLogController(ProjectManagementSystemContext context, LogService logService)
+    public ChangeLogController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -90,7 +92,7 @@ public class ChangeLogController : ControllerBase
 
     [Authorize]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -102,7 +104,7 @@ public class ChangeLogController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteChangeLog");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteChangeLog");
 
         //////////////////////////////////////////////////////
         
@@ -112,7 +114,7 @@ public class ChangeLogController : ControllerBase
 
         entity.IsDeleted = true;
 
-        await _logService.Log("Delete", nameof(ChangeLog), id);
+        await _logService.Log("Delete", nameof(ChangeLog), entity.ChangeLogId);
 
         var newEntity = new ChangeLogDto
         {

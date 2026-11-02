@@ -11,6 +11,7 @@ public partial class TaskManagementDto
     public Guid? StatusId { get; set; }
     public Guid? PriorityId { get; set; }
     public Guid? ParentId { get; set; }
+    public Guid? FileId { get; set; }
 
     public string Title { get; set; } = null!;
     public string ProjectName { get; set; } = null!;
@@ -24,4 +25,7 @@ public partial class TaskManagementDto
     public DateTime? StartDate { get; set; }
     public DateTime? DueDate { get; set; }
     public DateTime? CompletionDate { get; set; }
+
+    public List<DocumentDto> Documents { get; set; } = new();
+    public List<UserDto> Users { get; set; } = new();
 }

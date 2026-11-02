@@ -13,7 +13,7 @@ public partial class Project
 
     public Guid? PriorityId { get; set; }
 
-    public string? ProjectName { get; set; } = null!;
+    public string ProjectName { get; set; } = null!;
 
     public string? Desc { get; set; }
 

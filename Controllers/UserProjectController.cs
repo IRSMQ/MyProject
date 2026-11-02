@@ -16,11 +16,13 @@ public class UserProjectController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public UserProjectController(ProjectManagementSystemContext context, LogService logService)
+    public UserProjectController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -111,8 +113,8 @@ public class UserProjectController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost]
-    public async Task<IActionResult> Add([FromQuery] UserProjectDtoAdd dto)
+    [HttpPut]
+    public async Task<IActionResult> Put([FromBody] UserProjectDtoAdd dto)
     {
 
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
@@ -145,54 +147,43 @@ public class UserProjectController : ControllerBase
         if (entityUser == null)
             throw new KeyNotFoundException("User Not Found");
 
-        string text;
+        string message = string.Empty;
+        string text = string.Empty;
 
         if (dto.UserProjectId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditUserProject");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditUserProject");
+
             entity = await _context.UserProjects
                 .FirstOrDefaultAsync(e => e.UserProjectId == dto.UserProjectId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("User Project ID Not Found");
 
             if (entity.UserId == dto.UserId && entity.ProjectId == dto.ProjectId)
             {
-                text = "User Project Exist";
+                message = "User Project Exist";
             }
             else
             {
-                var logId = await _logService.Log("Edit", nameof(UserProject), dto.UserProjectId.Value);
-
                 if (entity.ProjectId != dto.ProjectId && dto.ProjectId.HasValue)
                 {
-                    await _logService.ChangLog(
-                        logId,
-                        entity.ProjectId.ToString(),
-                        dto.ProjectId.ToString(),
-                        nameof(entity.ProjectId)
-                    );
                     entity.ProjectId = dto.ProjectId.Value;
                 }
 
                 if (entity.UserId != dto.UserId && dto.UserId.HasValue)
                 {
-                    await _logService.ChangLog(
-                        logId,
-                        entity.UserId.ToString(),
-                        dto.UserId.ToString(),
-                        nameof(entity.ProjectId)
-                    );
                     entity.UserId = dto.UserId.Value;
                 }
 
                 entity.ProjectId = entity.ProjectId;
                 entity.UserId = entity.UserId;
-                text = "Edit Succeeded";
+                message = "Edit Succeeded";
+                text = "Edit";
             }
         
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddUserProject");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddUserProject");
             var newTU = new UserProject
             {
                 UserProjectId = Guid.NewGuid(),
@@ -200,26 +191,10 @@ public class UserProjectController : ControllerBase
                 UserId = dto.UserId.Value
             };
 
-            var logId = await _logService.Log("Create", nameof(UserProject), newTU.UserProjectId);
-
-            var entry = _context.Entry(newTU);
-
-            foreach (var prop in entry.Properties)
-            {
-                if (prop.Metadata.Name != "IsDeleted")
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        "null",
-                        prop.CurrentValue?.ToString() ?? "null",
-                        prop.Metadata.Name
-                    );
-                }
-            }
-
             entity.ProjectId = newTU.ProjectId;
             entity.UserId = newTU.UserId;
-            text = "Add Succeeded";
+            message = "Add Succeeded";
+            text = "Create";
         }
 
         await _context.UserProjects.AddAsync(entity);
@@ -232,14 +207,18 @@ public class UserProjectController : ControllerBase
             ProjectName = entityProject.ProjectName
         };
 
+        var entry = _context.Entry(entity);
+
+        await _logService.Log(text, nameof(UserProject), entity.UserProjectId, entry);
+
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<UserProjectDto>.Success(newUserProjectDto,$"{text}"));
+        return Ok(ApiResponse<UserProjectDto>.Success(newUserProjectDto,$"{message}"));
     }
 
     [Authorize]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -251,7 +230,7 @@ public class UserProjectController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId, tokenRoleId, "DeleteUserProject");
+        await _tokenService.CheckToken(tokenUserId, tokenRoleId, "DeleteUserProject");
 
         //////////////////////////////////////////////////////////////////////
         

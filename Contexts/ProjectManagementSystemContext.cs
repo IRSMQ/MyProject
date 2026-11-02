@@ -17,6 +17,8 @@ public partial class ProjectManagementSystemContext : DbContext
 
     public virtual DbSet<ChangeLog> ChangeLogs { get; set; }
 
+    public virtual DbSet<Document> Documents { get; set; }
+
     public virtual DbSet<Log> Logs { get; set; }
 
     public virtual DbSet<Permission> Permissions { get; set; }
@@ -30,6 +32,8 @@ public partial class ProjectManagementSystemContext : DbContext
     public virtual DbSet<RolePermission> RolePermissions { get; set; }
 
     public virtual DbSet<Status> Statuses { get; set; }
+
+    public virtual DbSet<TaskDocument> TaskDocuments { get; set; }
 
     public virtual DbSet<TaskManagement> TaskManagements { get; set; }
 
@@ -61,6 +65,19 @@ public partial class ProjectManagementSystemContext : DbContext
                 .HasForeignKey(d => d.LogId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChangeLogs_Log");
+        });
+
+        modelBuilder.Entity<Document>(entity =>
+        {
+            entity.ToTable("Document");
+
+            entity.Property(e => e.DocumentId)
+                .HasDefaultValueSql("(newid())", "DF_Document_DocumentID")
+                .HasColumnName("DocumentID");
+            entity.Property(e => e.ContentType).HasMaxLength(100);
+            entity.Property(e => e.FileName).HasMaxLength(100);
+            entity.Property(e => e.FilePath).HasMaxLength(500);
+            entity.Property(e => e.StoredFileName).HasMaxLength(255);
         });
 
         modelBuilder.Entity<Log>(entity =>
@@ -184,6 +201,27 @@ public partial class ProjectManagementSystemContext : DbContext
                 .HasDefaultValueSql("(newid())", "DF_Status_StatusId")
                 .HasColumnName("StatusID");
             entity.Property(e => e.StatusName).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<TaskDocument>(entity =>
+        {
+            entity.ToTable("TaskDocument");
+
+            entity.Property(e => e.TaskDocumentId)
+                .HasDefaultValueSql("(newid())", "DF_TaskDocument_TaskDocumentID")
+                .HasColumnName("TaskDocumentID");
+            entity.Property(e => e.DocumentId).HasColumnName("DocumentID");
+            entity.Property(e => e.TaskId).HasColumnName("TaskID");
+
+            entity.HasOne(d => d.Document).WithMany(p => p.TaskDocuments)
+                .HasForeignKey(d => d.DocumentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TaskDocument_Document");
+
+            entity.HasOne(d => d.Task).WithMany(p => p.TaskDocuments)
+                .HasForeignKey(d => d.TaskId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TaskDocument_TaskManagement");
         });
 
         modelBuilder.Entity<TaskManagement>(entity =>

@@ -16,11 +16,13 @@ public class RolePermissionController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public RolePermissionController(ProjectManagementSystemContext context, LogService logService)
+    public RolePermissionController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -111,8 +113,8 @@ public class RolePermissionController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost]
-    public async Task<IActionResult> Add([FromQuery] RPDtoAdd dto)
+    [HttpPut]
+    public async Task<IActionResult> Put([FromBody] RPDtoAdd dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -132,65 +134,28 @@ public class RolePermissionController : ControllerBase
             .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && e.PermissionId == dto.PermissionId && !e.IsDeleted);
 
             if (entity != null)
-                throw new ArgumentException($"This permission not available for this Role");
+                throw new ArgumentException($"This permission available for this Role");
 
-        string text;
+        string message = string.Empty;
+        string textLog = string.Empty;
 
         if (dto.RPID.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditRolePermission");
-            var entityRole = await _context.Roles
-                .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
-                ?? throw new KeyNotFoundException("Role Not Found");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditRolePermission");
 
-            var entityPermission = await _context.Permissions
-                .FirstOrDefaultAsync(e => e.PermissionId == dto.PermissionId && !e.IsDeleted)
-                ?? throw new KeyNotFoundException("Permission Not Found");
+            entity = await _context.RolePermissions
+                .FirstOrDefaultAsync(e => e.RolePermissionId == dto.RPID && !e.IsDeleted)
+                ?? throw new KeyNotFoundException("Role Permission Not Found");
 
-            if (entity.RoleId == dto.RoleId && entity.PermissionId == dto.PermissionId)
-            {
-                text = "Role Permission Exist";
-            }
-            else
-            {
-                var logId = await _logService.Log("Edit", nameof(RolePermission), entity.RolePermissionId);
+            entity.RoleId = dto.RoleId;
+            entity.PermissionId = dto.PermissionId;
 
-                await _logService.ChangLog(
-                    logId,
-                    entity.RoleId.ToString(),
-                    dto.RoleId.ToString(),
-                    nameof(entity.RoleId)
-                );
-
-                await _logService.ChangLog(
-                    logId,
-                    entity.PermissionId.ToString(),
-                    dto.PermissionId.ToString(),
-                    nameof(entity.PermissionId)
-                );
-
-                entity.RoleId = dto.RoleId;
-                entity.PermissionId = dto.PermissionId;
-
-                text = "Edit Succeeded";
-            }
+            message = "Edit Succeeded";
+            textLog = "Edit";
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddRolePermission");
-            var RoleEntity = await _context.Roles
-                .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
-                ?? throw new KeyNotFoundException("Role Not Found");
-            
-            var PermissionEntity = await _context.Permissions
-                .FirstOrDefaultAsync(e => e.PermissionId == dto.PermissionId && !e.IsDeleted)
-                ?? throw new KeyNotFoundException("Permission Not Found");
-
-            var exists = await _context.RolePermissions
-                .AnyAsync(e => e.RoleId == dto.RoleId && e.PermissionId == dto.PermissionId && e.IsDeleted == false);
-
-            if (exists)
-                throw new ArgumentException($"This Permission is available for this Role");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddRolePermission");
 
             entity = new RolePermission
             {
@@ -201,23 +166,8 @@ public class RolePermissionController : ControllerBase
 
             await _context.RolePermissions.AddAsync(entity);
 
-            var logId = await _logService.Log("Create", nameof(RolePermission), entity.RolePermissionId);
-
-            await _logService.ChangLog(
-                logId,
-                "null",
-                dto.RoleId.ToString(),
-                nameof(entity.RoleId)
-            );
-
-            await _logService.ChangLog(
-                logId,
-                "null",
-                dto.PermissionId.ToString(),
-                nameof(entity.PermissionId)
-            );
-
-            text = "Add Succeeded";
+            message = "Add Succeeded";
+            textLog = "Create";
         }
 
         var newEntityDto = new RPDto
@@ -228,16 +178,20 @@ public class RolePermissionController : ControllerBase
             RoleName = entity.Role.RoleName,
             PermissionName = entity.Permission.PermissionName
         };
+
+        var entry = _context.RolePermissions.Entry(entity);
+
+        await _logService.Log(textLog, nameof(RolePermission), entity.RolePermissionId, entry);
         
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<RPDto>.Success(newEntityDto, $"{text}"));
+        return Ok(ApiResponse<RPDto>.Success(newEntityDto, $"{message}"));
     }
 
 
     [Authorize]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -249,7 +203,7 @@ public class RolePermissionController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteRolePermission");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteRolePermission");
 
         //////////////////////////////////////////////////////
         

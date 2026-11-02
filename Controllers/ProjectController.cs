@@ -14,11 +14,13 @@ public class ProjectController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public ProjectController(ProjectManagementSystemContext context, LogService logService)
+    public ProjectController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -85,8 +87,8 @@ public class ProjectController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost]
-    public async Task<IActionResult> Add([FromQuery] CreateProject dto)
+    [HttpPut]
+    public async Task<IActionResult> Put([FromBody] CreateProject dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new ArgumentException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -104,13 +106,19 @@ public class ProjectController : ControllerBase
             .FirstOrDefaultAsync(e => e.ProjectName == dto.ProjectName && !e.IsDeleted);
 
         if (entity != null)
-            throw new ArgumentException("Project already exists.");        
+            throw new ArgumentException("Project already exists.");
 
-        entity = new Project();
+        string message = string.Empty;
+        string textLog = string.Empty;
 
         if (dto.ProjectId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditProject");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditProject");
+
+            entity = await _context.Projects
+                .FirstOrDefaultAsync(e => e.ProjectId == dto.ProjectId && !e.IsDeleted)
+                ?? throw new KeyNotFoundException("Project Not Found");
+
             if (dto.Nullable)
             {
                 entity.ManagerId = dto.ManagerId;
@@ -125,7 +133,7 @@ public class ProjectController : ControllerBase
                     .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
                     ?? throw new KeyNotFoundException("Manager Not Found");
 
-                await _logService.CheckToken(entityUser.UserId, entityUser.RoleId, "ProjectManager");
+                await _tokenService.CheckToken(entityUser.UserId, entityUser.RoleId, "ProjectManager");
 
                 entity.ManagerId = dto.ManagerId.Value;
             }
@@ -158,30 +166,12 @@ public class ProjectController : ControllerBase
             }
 
             entity.Desc = dto.Description ?? entity.Desc;
-
-            var entry = _context.Entry(entity);
-
-            var modifiedProps = entry.Properties
-                .Where(p => p.IsModified)
-                .Select(p => new
-                {
-                    ColumnName = p.Metadata.Name,
-                    OldVal = p.OriginalValue?.ToString() ?? "null",
-                    NewVal = p.CurrentValue?.ToString() ?? "null"
-                })
-                .ToList();
-
-            if (modifiedProps.Any())
-            {
-                var logId = await _logService.Log("Edit", nameof(Project), entity.ProjectId);
-
-                foreach (var change in modifiedProps)
-                    await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
-            }
+            message = "Edit Succeeded";
+            textLog = "Edit";
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddProject");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddProject");
 
             if (dto.ManagerId.HasValue)
             {
@@ -193,40 +183,8 @@ public class ProjectController : ControllerBase
                 if (entityUser.RoleId == null)
                     throw new ArgumentException("Role Is Null");
 
-                if (entityUser.Role.RoleName != "Manager")
+                if (entityUser.Role!.RoleName != "Manager")
                     throw new ArgumentException("Role Is Not Manager");
-            }
-
-            if (dto.StartDate.HasValue && dto.CreationDate.HasValue)
-            {
-                if (dto.StartDate < dto.CreationDate)
-                {
-                    throw new ArgumentException("Start Date < Creation Date");
-                }
-            }
-
-            if (dto.EndDate.HasValue && dto.StartDate.HasValue)
-            {
-                if (dto.EndDate < dto.StartDate)
-                {
-                    throw new ArgumentException("End Date < Start Date");
-                }
-            }
-
-            if (dto.DueDate.HasValue && dto.EndDate.HasValue)
-            {
-                if (dto.DueDate > dto.EndDate)
-                {
-                    throw new ArgumentException("Due Date > End Date");
-                }
-            }
-
-            if (dto.DueDate.HasValue && dto.StartDate.HasValue)
-            {
-                if (dto.DueDate < dto.StartDate)
-                {
-                    throw new ArgumentException("Due Date < Start Date");
-                }
             }
 
             entity = new Project
@@ -235,7 +193,7 @@ public class ProjectController : ControllerBase
                 StatusId = dto.StatusId,
                 ManagerId = dto.ManagerId,
                 PriorityId = dto.PriorityId,
-                ProjectName = dto.ProjectName,
+                ProjectName = dto.ProjectName!,
                 Desc = dto.Description,
                 CreationDate = dto.CreationDate,
                 StartDate = dto.StartDate,
@@ -244,28 +202,14 @@ public class ProjectController : ControllerBase
                 IsDeleted = false
             };
 
-            
-            var logId = await _logService.Log("Create", nameof(Project), entity.ProjectId);
-
-            var entry = _context.Entry(entity);
-            
-            foreach (var prop in entry.Properties)
-            {
-                if (prop.CurrentValue != null && prop.Metadata.Name != "IsDeleted")
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        oldValue: "null",
-                        newValue: prop.CurrentValue?.ToString() ?? "null",
-                        columnName: prop.Metadata.Name
-                    );
-                }
-            }
-
             await _context.Projects.AddAsync(entity);
+            message = "Add Succeeded";
+            textLog = "Create";
         }
 
-        
+        var entry = _context.Projects.Entry(entity);
+
+        await _logService.Log(textLog, nameof(Project), entity.ProjectId, entry);
 
         await _context.SaveChangesAsync();
 
@@ -274,7 +218,7 @@ public class ProjectController : ControllerBase
 
     [Authorize]
     [HttpPut]
-    public async Task<IActionResult> EditDate([FromQuery] EditAllDate dto)
+    public async Task<IActionResult> EditDate([FromBody] EditAllDate dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -286,7 +230,7 @@ public class ProjectController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditDateProject");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditDateProject");
 
         //////////////////////////////////////////////////////
         
@@ -355,27 +299,7 @@ public class ProjectController : ControllerBase
 
         var entry = _context.Entry(entity);
 
-        var modifiedProps = entry.Properties
-            .Where(e => e.IsModified)
-            .Select(e => new
-            {
-                ColumnName = e.Metadata.Name,
-                OldVal = e.OriginalValue?.ToString() ?? "null",
-                NewVal = e.CurrentValue?.ToString() ?? "null"
-            })
-            .ToList();
-
-        if (modifiedProps.Any())
-        {
-            var tableName = _context.Model
-                .FindEntityType(typeof(Project))?
-                .GetTableName() ?? nameof(Project);
-
-            var logId = await _logService.Log("Edit", tableName, entity.ProjectId);
-
-            foreach (var change in modifiedProps)
-                await _logService.ChangLog(logId, change.OldVal, change.NewVal, change.ColumnName);
-        }
+        await _logService.Log("Edit", nameof(Project), entity.ProjectId, entry);
 
         await _context.SaveChangesAsync();
 
@@ -384,7 +308,7 @@ public class ProjectController : ControllerBase
 
     [Authorize]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new ArgumentException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -396,7 +320,7 @@ public class ProjectController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteProject");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteProject");
 
         //////////////////////////////////////////////////////
         
