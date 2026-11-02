@@ -50,7 +50,7 @@ public class ProjectController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(ApiResponse<List<ProjectDto>>.Success(projects,$"Get All Succeeded"));
+        return Ok(ApiResponse<List<ProjectDto>>.Success(projects, $"Get All Succeeded"));
     }
 
     [HttpGet]
@@ -78,12 +78,10 @@ public class ProjectController : ControllerBase
                 ManagerName = e.Manager.UserFullName,
                 PriorityName = e.Priority.PriorityName
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"Project Not Found");
 
-        if (entity == null)
-            throw new KeyNotFoundException($"Project Not Found");
-
-        return Ok(ApiResponse<ProjectDto>.Success(entity,$"Get By ID Succeeded"));
+        return Ok(ApiResponse<ProjectDto>.Success(entity, $"Get By ID Succeeded"));
     }
 
     [Authorize]
@@ -108,6 +106,20 @@ public class ProjectController : ControllerBase
         if (entity != null)
             throw new ArgumentException("Project already exists.");
 
+        if (dto.ManagerId.HasValue)
+        {
+            var entityUser = await _context.Users
+                .Include(e => e.Role)
+                .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
+                ?? throw new KeyNotFoundException("User Not Found");
+
+            if (entityUser.RoleId == null)
+                throw new ArgumentException("Role Is Null");
+
+            if (entityUser.Role!.RoleName != "Manager")
+                throw new ArgumentException("Role Is Not Manager");
+        }
+
         string message = string.Empty;
         string textLog = string.Empty;
 
@@ -127,34 +139,11 @@ public class ProjectController : ControllerBase
                 entity.Desc = dto.Description;
             }
 
-            if (dto.ManagerId.HasValue)
-            {
-                var entityUser = await _context.Users
-                    .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
-                    ?? throw new KeyNotFoundException("Manager Not Found");
-
-                await _tokenService.CheckToken(entityUser.UserId, entityUser.RoleId, "ProjectManager");
-
-                entity.ManagerId = dto.ManagerId.Value;
-            }
-
             if (dto.PriorityId.HasValue)
-            {
-                var entityPriority = await _context.Priorities
-                    .FirstOrDefaultAsync(e => e.PriorityId == dto.PriorityId && !e.IsDeleted)
-                    ?? throw new KeyNotFoundException("Priority Not Found");
-
                 entity.PriorityId = dto.PriorityId;
-            }
 
             if (dto.StatusId.HasValue)
-            {
-                var entityStatus = await _context.Statuses
-                    .FirstOrDefaultAsync(e => e.StatusId == dto.StatusId && !e.IsDeleted)
-                    ?? throw new KeyNotFoundException("Status Not Found");
-
                 entity.StatusId = dto.StatusId;
-            }
 
             if (!string.IsNullOrWhiteSpace(dto.ProjectName))
             {
@@ -165,27 +154,15 @@ public class ProjectController : ControllerBase
                 entity.ProjectName = dto.ProjectName;
             }
 
-            entity.Desc = dto.Description ?? entity.Desc;
+            if (string.IsNullOrEmpty(dto.Description))
+                entity.Desc = dto.Description;
+                
             message = "Edit Succeeded";
             textLog = "Edit";
         }
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddProject");
-
-            if (dto.ManagerId.HasValue)
-            {
-                var entityUser = await _context.Users
-                    .Include(e => e.Role)
-                    .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
-                    ?? throw new KeyNotFoundException("User Not Found");
-
-                if (entityUser.RoleId == null)
-                    throw new ArgumentException("Role Is Null");
-
-                if (entityUser.Role!.RoleName != "Manager")
-                    throw new ArgumentException("Role Is Not Manager");
-            }
 
             entity = new Project
             {
@@ -203,6 +180,7 @@ public class ProjectController : ControllerBase
             };
 
             await _context.Projects.AddAsync(entity);
+
             message = "Add Succeeded";
             textLog = "Create";
         }
@@ -213,7 +191,7 @@ public class ProjectController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Add Succeeded"));
+        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity), $"Add Succeeded"));
     }
 
     [Authorize]
@@ -300,6 +278,7 @@ public class ProjectController : ControllerBase
         await _logService.Log("Delete", nameof(Project), entity.ProjectId);
 
         /////////////////////////////////////////////////////////
+        
         var entityUserProject = await _context.UserProjects
             .Where(e => e.ProjectId == id && !e.IsDeleted)
             .ToListAsync();
@@ -308,12 +287,13 @@ public class ProjectController : ControllerBase
         {
             foreach (var e in entityUserProject)
             {
-                await _logService.Log("Delete", nameof(UserProject), e.UserProjectId);
                 e.IsDeleted = true;
+                await _logService.Log("Delete", nameof(UserProject), e.UserProjectId);
             }
         }
 
         /////////////////////////////////////////////////////////
+        
         var entityTaskManagement = await _context.TaskManagements
             .Where(e => e.ProjectId == id && !e.IsDeleted)
             .ToListAsync();
@@ -322,8 +302,8 @@ public class ProjectController : ControllerBase
         {
             foreach (var e in entityTaskManagement)
             {
-                await _logService.Log("Delete", nameof(TaskManagement), e.TaskManagementId);
                 e.IsDeleted = true;
+                await _logService.Log("Delete", nameof(TaskManagement), e.TaskManagementId);
             }
         }
 

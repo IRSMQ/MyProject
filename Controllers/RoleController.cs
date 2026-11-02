@@ -38,7 +38,7 @@ public class RoleController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(ApiResponse<List<RoleDto>>.Success(entity,$"Succeeded"));
+        return Ok(ApiResponse<List<RoleDto>>.Success(entity, $"Get All Succeeded"));
     }
 
     [HttpGet]
@@ -55,7 +55,7 @@ public class RoleController : ControllerBase
             .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Role Not Found");
 
-        return Ok(ApiResponse<RoleDto>.Success(entity,$"Get By ID Succeeded"));
+        return Ok(ApiResponse<RoleDto>.Success(entity, $"Get By ID Succeeded"));
     }
 
     [Authorize]
@@ -87,6 +87,7 @@ public class RoleController : ControllerBase
         if (dto.RoleId.HasValue)
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditRole");
+
             entity = await _context.Roles
                 .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Role Not Found");
@@ -105,6 +106,7 @@ public class RoleController : ControllerBase
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddRole");
+
             entity = new Role
             {
                 RoleId = Guid.NewGuid(),
@@ -125,6 +127,7 @@ public class RoleController : ControllerBase
         };
 
         var entry = _context.Roles.Entry(entity);
+
         await _logService.Log(textLog, nameof(Role), entity.RoleId, entry);
 
         await _context.SaveChangesAsync();
@@ -156,6 +159,7 @@ public class RoleController : ControllerBase
 
 
         /////////////////////////////////////////////////////////
+        
         var entityUser = await _context.Users
             .Where(e => e.RoleId == id && !e.IsDeleted)
             .ToListAsync();
@@ -167,8 +171,8 @@ public class RoleController : ControllerBase
             await _logService.Log("Edit", nameof(Models.User), e.UserId, entry);
         }
 
-
         /////////////////////////////////////////////////////////
+        
         var entityRolePermission = await _context.RolePermissions
             .Where(e => e.RoleId == id && !e.IsDeleted)
             .ToListAsync();

@@ -50,12 +50,10 @@ public class PermissionController : ControllerBase
                 PermissionId = e.PermissionId,
                 PermissionName = e.PermissionName,
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"Permission Not Found");
 
-        if (entity == null)
-            throw new KeyNotFoundException($"Permission Not Found");
-
-        return Ok(ApiResponse<PermissionDto>.Success(entity,$"Get All Succeeded"));
+        return Ok(ApiResponse<PermissionDto>.Success(entity, $"Get All Succeeded"));
     }
 
     [Authorize]
@@ -106,6 +104,7 @@ public class PermissionController : ControllerBase
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddPermission");
+            
             entity = new Permission
             {
                 PermissionId = Guid.NewGuid(),

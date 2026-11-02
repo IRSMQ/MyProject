@@ -69,7 +69,7 @@ public class TaskDocumentController : ControllerBase
         return Ok(ApiResponse<TaskDocumentDto>.Success(entity, "Get By ID Succeeded"));
     }
 
-    [HttpPost]
+    [HttpPut]
     public async Task<IActionResult> Put(TaskDocumentAddDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
@@ -145,6 +145,6 @@ public class TaskDocumentController : ControllerBase
             DocumentName = entityDocument?.FileName
         };
 
-        return Ok(ApiResponse<TaskDocumentDto>.Success(newEntity ,$"{message}"));
+        return Ok(ApiResponse<TaskDocumentDto>.Success(newEntity, $"{message}"));
     }
 }

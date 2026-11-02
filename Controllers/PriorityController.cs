@@ -36,7 +36,7 @@ public class PriorityController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(ApiResponse<List<PriorityDto>>.Success(entity,$"Get All Succeeded"));
+        return Ok(ApiResponse<List<PriorityDto>>.Success(entity, $"Get All Succeeded"));
     }
 
     [HttpGet]
@@ -53,7 +53,7 @@ public class PriorityController : ControllerBase
             .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Priority Not Found");
 
-        return Ok(ApiResponse<PriorityDto>.Success(entity,$"Get By ID Succeeded"));
+        return Ok(ApiResponse<PriorityDto>.Success(entity, $"Get By ID Succeeded"));
     }
 
     [Authorize]
@@ -103,6 +103,7 @@ public class PriorityController : ControllerBase
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddPriority");
+
             entity = new Priority
             {
                 PriorityId = Guid.NewGuid(),
@@ -148,10 +149,10 @@ public class PriorityController : ControllerBase
 
         entity.IsDeleted = true;
 
-        await _logService.Log("Delete", nameof(Priority), entity.PriorityId, null);
-
+        await _logService.Log("Delete", nameof(Priority), entity.PriorityId);
 
         /////////////////////////////////////////////////////////
+
         var entityProject = await _context.Projects
             .Where(e => e.PriorityId == id && !e.IsDeleted)
             .ToListAsync();
@@ -163,8 +164,8 @@ public class PriorityController : ControllerBase
             await _logService.Log("Edit", nameof(Project), e.ProjectId, entry);
         }
 
-
         /////////////////////////////////////////////////////////
+
         var entityTaskManagement = await _context.TaskManagements
             .Where(e => e.PriorityId == id && !e.IsDeleted)
             .ToListAsync();
