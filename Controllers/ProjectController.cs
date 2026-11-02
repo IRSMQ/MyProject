@@ -251,51 +251,16 @@ public class ProjectController : ControllerBase
         }
 
         if (dto.CreationDate.HasValue)
-        {
-            if (dto.CreationDate > entity.StartDate || dto.CreationDate > entity.EndDate)
-                throw new ArgumentException("End/Start Date < Create Date");
-
-            foreach (var e in entityTaskManagement)
-            {
-                if (e.CreationDate < dto.CreationDate)
-                    throw new ArgumentException("TM Creation Date < Project Creation Date");
-            }
             entity.CreationDate = dto.CreationDate;
-        }
 
         if (dto.StartDate.HasValue)
-        {
-            if (dto.StartDate > entity.EndDate || dto.StartDate < entity.CreationDate)
-                throw new ArgumentException("Start Date > End Date or Start Date < Creation Date");
-
-            foreach (var e in entityTaskManagement)
-            {
-                if (dto.StartDate > e.StartDate)
-                    throw new ArgumentException("Start Date Project > Start Date Task");
-            }
-
             entity.StartDate = dto.StartDate;
-        }
 
         if (dto.DueDate.HasValue)
-        {
-            if (dto.DueDate > entity.EndDate || dto.DueDate < entity.CreationDate)
-                throw new ArgumentException("Due Date > End Date or Due Date < Creation Date");
-
             entity.DueDate = dto.DueDate;
-        }
 
         if (dto.EndDate.HasValue)
-        {
-            if (dto.EndDate < entity.CreationDate || dto.EndDate < entity.StartDate)
-                throw new ArgumentException("End Date < Creation Date or End Date < Start Date");
-
-            foreach (var e in entityTaskManagement)
-                if (e.CompletionDate > dto.EndDate)
-                    throw new ArgumentException("Task Completion Date > Project Completion Date");
-
             entity.EndDate = dto.EndDate;
-        }
 
         var entry = _context.Entry(entity);
 
