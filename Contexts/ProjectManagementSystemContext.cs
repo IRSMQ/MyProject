@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Test26.Models;
-
 namespace Test26.Context;
 
 public partial class ProjectManagementSystemContext : DbContext
@@ -75,10 +74,10 @@ public partial class ProjectManagementSystemContext : DbContext
             entity.Property(e => e.DocumentId)
                 .HasDefaultValueSql("(newid())", "DF_Document_DocumentID")
                 .HasColumnName("DocumentID");
-            entity.Property(e => e.ContentType).HasMaxLength(15);
-            entity.Property(e => e.FileName).HasMaxLength(50);
-            entity.Property(e => e.FilePath).HasMaxLength(100);
-            entity.Property(e => e.StoredFileName).HasMaxLength(100);
+            entity.Property(e => e.ContentType).HasMaxLength(100);
+            entity.Property(e => e.FileName).HasMaxLength(100);
+            entity.Property(e => e.FilePath).HasMaxLength(500);
+            entity.Property(e => e.StoredFileName).HasMaxLength(255);
         });
 
         modelBuilder.Entity<Log>(entity =>

@@ -183,7 +183,7 @@ public class ProjectController : ControllerBase
                 if (entityUser.RoleId == null)
                     throw new ArgumentException("Role Is Null");
 
-                if (entityUser.Role.RoleName != "Manager")
+                if (entityUser.Role!.RoleName != "Manager")
                     throw new ArgumentException("Role Is Not Manager");
             }
 
@@ -193,7 +193,7 @@ public class ProjectController : ControllerBase
                 StatusId = dto.StatusId,
                 ManagerId = dto.ManagerId,
                 PriorityId = dto.PriorityId,
-                ProjectName = dto.ProjectName,
+                ProjectName = dto.ProjectName!,
                 Desc = dto.Description,
                 CreationDate = dto.CreationDate,
                 StartDate = dto.StartDate,

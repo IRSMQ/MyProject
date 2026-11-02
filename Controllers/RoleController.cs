@@ -114,7 +114,6 @@ public class RoleController : ControllerBase
 
             await _context.Roles.AddAsync(entity);
 
-            await _context.AddAsync(entity);
             message = "Add Succeeded";
             textLog = "Create";
         }

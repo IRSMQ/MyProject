@@ -17,5 +17,7 @@ public partial class Document
 
     public long FileSize { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<TaskDocument> TaskDocuments { get; set; } = new List<TaskDocument>();
 }

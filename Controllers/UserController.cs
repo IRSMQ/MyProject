@@ -18,20 +18,16 @@ public class UserController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly TokenService _tokenService;
-    private readonly PasswordHassherHandler _passwordHassherHandler;
     private readonly LogService _logService;
-    private readonly TokenService _tokenService1;
 
     public UserController(
         ProjectManagementSystemContext context,
         TokenService tokenService,
-        PasswordHassherHandler passwordHassherHandler,
         LogService logService
         )
     {
         _context = context;
         _tokenService = tokenService;
-        _passwordHassherHandler = passwordHassherHandler;
         _logService = logService;
     }
 
@@ -126,8 +122,8 @@ public class UserController : ControllerBase
             if (!string.IsNullOrEmpty(dto.Username) && entity.Username != dto.Username)
                 entity.Username = dto.Username;
 
-            if (!string.IsNullOrEmpty(dto.UserPassword) && entity.UserPassword != _passwordHassherHandler.Hash(dto.UserPassword))
-                entity.UserPassword = _passwordHassherHandler.Hash(dto.UserPassword);
+            if (!string.IsNullOrEmpty(dto.UserPassword) && entity.UserPassword != PasswordHassherHandler.Hash(dto.UserPassword))
+                entity.UserPassword = PasswordHassherHandler.Hash(dto.UserPassword);
             
             message = "Edit Succeeded";
             text = "Edit";
@@ -145,7 +141,7 @@ public class UserController : ControllerBase
                 RoleId = dto.RoleId,
                 UserFullName = dto.UserFullName!,
                 Username = dto.Username!,
-                UserPassword = _passwordHassherHandler.Hash(dto.UserPassword!),
+                UserPassword = PasswordHassherHandler.Hash(dto.UserPassword!),
                 UserEmail = dto.UserEmail,
                 UserPhone = dto.UserPhone
             };
@@ -171,7 +167,7 @@ public class UserController : ControllerBase
             .FirstOrDefaultAsync(e => e.Username == userLoginDto.Username && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User not found");
 
-        var isPasswordValid = _passwordHassherHandler.Verify(userLoginDto.Password, entity.UserPassword);
+        var isPasswordValid = PasswordHassherHandler.Verify(userLoginDto.Password, entity.UserPassword);
 
         if (!isPasswordValid)
             throw new UnauthorizedAccessException("Invalid password");

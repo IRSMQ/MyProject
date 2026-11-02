@@ -49,14 +49,33 @@ public class LogService
         {
             foreach (var prop in entry.Properties)
             {
-                if (prop.OriginalValue != prop.CurrentValue && prop.Metadata.Name != "IsDeleted")
+                if (prop.Metadata.Name == "IsDeleted")
+                    continue;
+
+                if (entry.State == EntityState.Added)
                 {
-                    await ChangLog(
-                        logId,
-                        prop.OriginalValue.ToString(),
-                        prop.CurrentValue.ToString(),
-                        prop.Metadata.Name
-                    );
+                    if (prop.CurrentValue != null)
+                    {
+                        await ChangLog(
+                            logId,
+                            "null",
+                            prop.CurrentValue?.ToString() ?? "null",
+                            prop.Metadata.Name
+                        );
+                    }
+                }
+                else if (entry.State == EntityState.Modified)
+                {
+                    if (prop.OriginalValue?.ToString() != prop.CurrentValue?.ToString())
+                    {
+                        await ChangLog
+                        (
+                            logId,
+                            prop.OriginalValue?.ToString() ?? "null",
+                            prop.CurrentValue?.ToString() ?? "null",
+                            prop.Metadata.Name
+                        );
+                    }
                 }
             }
         }
