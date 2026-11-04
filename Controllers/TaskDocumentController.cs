@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Test26.ApiR;
@@ -69,6 +70,7 @@ public class TaskDocumentController : ControllerBase
         return Ok(ApiResponse<TaskDocumentDto>.Success(entity, "Get By ID Succeeded"));
     }
 
+    [Authorize]
     [HttpPut]
     public async Task<IActionResult> Put(TaskDocumentAddDto dto)
     {
@@ -88,6 +90,8 @@ public class TaskDocumentController : ControllerBase
 
         if (dto.TaskDocumentId.HasValue)
         {
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditTaskDocument");
+
             entity = await _context.TaskDocuments
                 .Include(e => e.Task)
                 .Include(e => e.Document)
@@ -105,6 +109,8 @@ public class TaskDocumentController : ControllerBase
         }
         else
         {
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "CreateTaskDocument");
+
             if (!dto.TaskId.HasValue || !dto.DocumentId.HasValue)
                 throw new ArgumentException("Task ID or Document ID is Null");
 
@@ -146,5 +152,40 @@ public class TaskDocumentController : ControllerBase
         };
 
         return Ok(ApiResponse<TaskDocumentDto>.Success(newEntity, $"{message}"));
+    }
+
+    [Authorize]
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
+
+        await _tokenService.CheckToken(tokenUserId, tokenRoleId, "DeleteTaskDocument");
+
+
+        var entity = await _context.TaskDocuments
+            .Include(e => e.Document)
+            .Include(e => e.Task)
+            .FirstOrDefaultAsync(e => e.DocumentId == id && !e.IsDeleted)
+            ?? throw new KeyNotFoundException("Task Document Not Found");
+
+        entity.IsDeleted = true;
+
+        await _logService.Log("Delete", nameof(TaskDocument), entity.DocumentId);
+
+        var newEntity = new TaskDocumentDto
+        {
+            DocumentId = entity.DocumentId,
+        };
+
+        return Ok(new {entity.TaskDocumentId, entity.TaskId, entity.DocumentId, entity.Task.Title, entity.Document.FileName});
     }
 }
