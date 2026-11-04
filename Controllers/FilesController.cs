@@ -18,16 +18,19 @@ public class FilesController : ControllerBase
     private readonly ProjectManagementSystemContext _context;
     private readonly IWebHostEnvironment _env;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
     public FilesController(
         ProjectManagementSystemContext context,
         IWebHostEnvironment env,
-        LogService logService
+        LogService logService,
+        TokenService tokenService
         )
     {
         _context = context;
         _env = env;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -76,6 +79,8 @@ public class FilesController : ControllerBase
             tokenRoleId = Guid.Parse(tokenRoleName);
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
+
+        await _tokenService.CheckToken(tokenUserId, tokenRoleId, "UploadFile");
 
         ////////////////////////////////////////////////////// 
         
@@ -128,6 +133,8 @@ public class FilesController : ControllerBase
             tokenRoleId = Guid.Parse(tokenRoleName);
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
+
+        await _tokenService.CheckToken(tokenUserId, tokenRoleId, "DeleteFile");
 
         ////////////////////////////////////////////////////// 
         
