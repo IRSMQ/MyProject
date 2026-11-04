@@ -455,7 +455,7 @@ public class TaskManagementController : ControllerBase
         string message = string.Empty;
         string textLog = string.Empty;
 
-        if (!dto.TaskId.HasValue)
+        if (dto.TaskId.HasValue)
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditTaskManagement");
 
@@ -517,7 +517,6 @@ public class TaskManagementController : ControllerBase
 
             message = "Edit Succeeded";
             textLog = "Edit";
-            
         }
         else
         {
