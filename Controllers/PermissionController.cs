@@ -104,7 +104,6 @@ public class PermissionController : ControllerBase
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddPermission");
-            
             entity = new Permission
             {
                 PermissionId = Guid.NewGuid(),
