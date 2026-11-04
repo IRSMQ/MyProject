@@ -57,7 +57,7 @@ public class FilesController : ControllerBase
         ////////////////////////////////////////////////////// 
         
         if (dto.File == null || dto.File.Length == 0)
-            return BadRequest("فایلی ارسال نشده است");
+            return BadRequest("No File Has Been Sent");
 
         var uploadsFolder = Path.Combine(_env.ContentRootPath, "Uploads");
         if (!Directory.Exists(uploadsFolder))
