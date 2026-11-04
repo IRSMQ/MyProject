@@ -103,7 +103,6 @@ public class PriorityController : ControllerBase
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddPriority");
-
             entity = new Priority
             {
                 PriorityId = Guid.NewGuid(),
@@ -149,7 +148,7 @@ public class PriorityController : ControllerBase
 
         entity.IsDeleted = true;
 
-        await _logService.Log("Delete", nameof(Priority), entity.PriorityId);
+        await _logService.Log("Delete", nameof(Priority), entity.PriorityId, null);
 
         /////////////////////////////////////////////////////////
 
