@@ -50,7 +50,7 @@ public class ProjectController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(ApiResponse<List<ProjectDto>>.Success(projects,$"Get All Succeeded"));
+        return Ok(ApiResponse<List<ProjectDto>>.Success(projects, $"Get All Succeeded"));
     }
 
     [HttpGet]
@@ -78,12 +78,10 @@ public class ProjectController : ControllerBase
                 ManagerName = e.Manager.UserFullName,
                 PriorityName = e.Priority.PriorityName
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"Project Not Found");
 
-        if (entity == null)
-            throw new KeyNotFoundException($"Project Not Found");
-
-        return Ok(ApiResponse<ProjectDto>.Success(entity,$"Get By ID Succeeded"));
+        return Ok(ApiResponse<ProjectDto>.Success(entity, $"Get By ID Succeeded"));
     }
 
     [Authorize]
@@ -139,22 +137,10 @@ public class ProjectController : ControllerBase
             }
 
             if (dto.PriorityId.HasValue)
-            {
-                var entityPriority = await _context.Priorities
-                    .FirstOrDefaultAsync(e => e.PriorityId == dto.PriorityId && !e.IsDeleted)
-                    ?? throw new KeyNotFoundException("Priority Not Found");
-
                 entity.PriorityId = dto.PriorityId;
-            }
 
             if (dto.StatusId.HasValue)
-            {
-                var entityStatus = await _context.Statuses
-                    .FirstOrDefaultAsync(e => e.StatusId == dto.StatusId && !e.IsDeleted)
-                    ?? throw new KeyNotFoundException("Status Not Found");
-
                 entity.StatusId = dto.StatusId;
-            }
 
             if (!string.IsNullOrWhiteSpace(dto.ProjectName))
             {
@@ -213,7 +199,7 @@ public class ProjectController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Add Succeeded"));
+        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity), $"Add Succeeded"));
     }
 
     [Authorize]
@@ -251,51 +237,16 @@ public class ProjectController : ControllerBase
         }
 
         if (dto.CreationDate.HasValue)
-        {
-            if (dto.CreationDate > entity.StartDate || dto.CreationDate > entity.EndDate)
-                throw new ArgumentException("End/Start Date < Create Date");
-
-            foreach (var e in entityTaskManagement)
-            {
-                if (e.CreationDate < dto.CreationDate)
-                    throw new ArgumentException("TM Creation Date < Project Creation Date");
-            }
             entity.CreationDate = dto.CreationDate;
-        }
 
         if (dto.StartDate.HasValue)
-        {
-            if (dto.StartDate > entity.EndDate || dto.StartDate < entity.CreationDate)
-                throw new ArgumentException("Start Date > End Date or Start Date < Creation Date");
-
-            foreach (var e in entityTaskManagement)
-            {
-                if (dto.StartDate > e.StartDate)
-                    throw new ArgumentException("Start Date Project > Start Date Task");
-            }
-
             entity.StartDate = dto.StartDate;
-        }
 
         if (dto.DueDate.HasValue)
-        {
-            if (dto.DueDate > entity.EndDate || dto.DueDate < entity.CreationDate)
-                throw new ArgumentException("Due Date > End Date or Due Date < Creation Date");
-
             entity.DueDate = dto.DueDate;
-        }
 
         if (dto.EndDate.HasValue)
-        {
-            if (dto.EndDate < entity.CreationDate || dto.EndDate < entity.StartDate)
-                throw new ArgumentException("End Date < Creation Date or End Date < Start Date");
-
-            foreach (var e in entityTaskManagement)
-                if (e.CompletionDate > dto.EndDate)
-                    throw new ArgumentException("Task Completion Date > Project Completion Date");
-
             entity.EndDate = dto.EndDate;
-        }
 
         var entry = _context.Entry(entity);
 
@@ -335,6 +286,7 @@ public class ProjectController : ControllerBase
         await _logService.Log("Delete", nameof(Project), entity.ProjectId);
 
         /////////////////////////////////////////////////////////
+        
         var entityUserProject = await _context.UserProjects
             .Where(e => e.ProjectId == id && !e.IsDeleted)
             .ToListAsync();
@@ -343,12 +295,13 @@ public class ProjectController : ControllerBase
         {
             foreach (var e in entityUserProject)
             {
-                await _logService.Log("Delete", nameof(UserProject), e.UserProjectId);
                 e.IsDeleted = true;
+                await _logService.Log("Delete", nameof(UserProject), e.UserProjectId);
             }
         }
 
         /////////////////////////////////////////////////////////
+        
         var entityTaskManagement = await _context.TaskManagements
             .Where(e => e.ProjectId == id && !e.IsDeleted)
             .ToListAsync();
@@ -357,8 +310,8 @@ public class ProjectController : ControllerBase
         {
             foreach (var e in entityTaskManagement)
             {
-                await _logService.Log("Delete", nameof(TaskManagement), e.TaskManagementId);
                 e.IsDeleted = true;
+                await _logService.Log("Delete", nameof(TaskManagement), e.TaskManagementId);
             }
         }
 

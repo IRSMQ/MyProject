@@ -38,7 +38,7 @@ public class RoleController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(ApiResponse<List<RoleDto>>.Success(entity,$"Succeeded"));
+        return Ok(ApiResponse<List<RoleDto>>.Success(entity, $"Get All Succeeded"));
     }
 
     [HttpGet]
@@ -55,7 +55,7 @@ public class RoleController : ControllerBase
             .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Role Not Found");
 
-        return Ok(ApiResponse<RoleDto>.Success(entity,$"Get By ID Succeeded"));
+        return Ok(ApiResponse<RoleDto>.Success(entity, $"Get By ID Succeeded"));
     }
 
     [Authorize]
@@ -156,6 +156,7 @@ public class RoleController : ControllerBase
 
 
         /////////////////////////////////////////////////////////
+        
         var entityUser = await _context.Users
             .Where(e => e.RoleId == id && !e.IsDeleted)
             .ToListAsync();
@@ -167,8 +168,8 @@ public class RoleController : ControllerBase
             await _logService.Log("Edit", nameof(Models.User), e.UserId, entry);
         }
 
-
         /////////////////////////////////////////////////////////
+        
         var entityRolePermission = await _context.RolePermissions
             .Where(e => e.RoleId == id && !e.IsDeleted)
             .ToListAsync();

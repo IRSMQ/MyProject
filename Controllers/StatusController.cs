@@ -38,7 +38,7 @@ public class StatusController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(entity);
+        return Ok(ApiResponse<List<StatusDto>>.Success(entity ,$"Get All Succeeded"));
     }
 
     [HttpGet]
@@ -75,7 +75,7 @@ public class StatusController : ControllerBase
         //////////////////////////////////////////////////////
         
         var entity = await _context.Statuses
-            .FirstOrDefaultAsync(p => p.StatusName == dto.StatusName && !p.IsDeleted);
+            .FirstOrDefaultAsync(e => e.StatusName == dto.StatusName && !e.IsDeleted);
 
         if (entity != null)
             throw new ArgumentException("Status already exists");
@@ -158,6 +158,7 @@ public class StatusController : ControllerBase
 
 
         /////////////////////////////////////////////////////////
+        
         var entityProject = await _context.Projects
             .Where(e => e.StatusId == id && !e.IsDeleted)
             .ToListAsync();
@@ -173,6 +174,7 @@ public class StatusController : ControllerBase
         }
 
         /////////////////////////////////////////////////////////
+        
         var entityTaskManagement = await _context.TaskManagements
             .Where(e => e.StatusId == id && !e.IsDeleted)
             .ToListAsync();
@@ -199,6 +201,6 @@ public class StatusController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<StatusDto>.Success(newStatus,$"Delete Succeeded"));
+        return Ok(ApiResponse<StatusDto>.Success(newStatus, $"Delete Succeeded"));
     }
 }

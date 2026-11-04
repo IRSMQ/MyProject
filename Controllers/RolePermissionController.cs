@@ -64,7 +64,7 @@ public class RolePermissionController : ControllerBase
             .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"RolePermission Not Found");
 
-        return Ok(ApiResponse<RPDto>.Success(entity, $"Succeeded"));
+        return Ok(ApiResponse<RPDto>.Success(entity, $"Get By ID Succeeded"));
     }
 
     [HttpGet]
@@ -83,10 +83,7 @@ public class RolePermissionController : ControllerBase
             })
             .ToListAsync();
 
-        if (entity.Count == 0)
-            throw new KeyNotFoundException($"RolePermission Not Found");
-
-        return Ok(ApiResponse<List<RPDto>>.Success(entity, $"Succeeded"));
+        return Ok(ApiResponse<List<RPDto>>.Success(entity, $"Get By Role ID Succeeded"));
     }
 
 
@@ -106,10 +103,7 @@ public class RolePermissionController : ControllerBase
             })
             .ToListAsync();
 
-        if (entity.Count == 0)
-            throw new KeyNotFoundException($"RolePermission Not Found");
-
-        return Ok(ApiResponse<List<RPDto>>.Success(entity, $"Succeeded"));
+        return Ok(ApiResponse<List<RPDto>>.Success(entity, $"Get By Permission ID Succeeded"));
     }
 
     [Authorize]
@@ -226,6 +220,6 @@ public class RolePermissionController : ControllerBase
         
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<RPDto>.Success(result,$"Delete Succeeded"));
+        return Ok(ApiResponse<RPDto>.Success(result, $"Delete Succeeded"));
     }
 }
