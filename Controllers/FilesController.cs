@@ -115,9 +115,22 @@ public class FilesController : ControllerBase
         return Ok(new { newFile.DocumentId, newFile.FileName });
     }
 
+    [Authorize]
     [HttpDelete]
     public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
+        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
+        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+
+        Guid tokenRoleId;
+
+        if (!string.IsNullOrEmpty(tokenRoleName))
+            tokenRoleId = Guid.Parse(tokenRoleName);
+        else
+            throw new UnauthorizedAccessException("Token Role Is Null");
+
+        ////////////////////////////////////////////////////// 
+        
         var entity = await _context.Documents
             .FirstOrDefaultAsync(e => e.DocumentId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("File Not Found");
