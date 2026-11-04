@@ -39,5 +39,7 @@ public partial class TaskManagement
 
     public virtual Status? Status { get; set; }
 
+    public virtual ICollection<TaskDocument> TaskDocuments { get; set; } = new List<TaskDocument>();
+
     public virtual ICollection<TaskUser> TaskUsers { get; set; } = new List<TaskUser>();
 }

@@ -15,10 +15,12 @@ public class PermissionController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    public PermissionController(ProjectManagementSystemContext context, LogService logService)
+    private readonly TokenService _tokenService;
+    public PermissionController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -48,17 +50,15 @@ public class PermissionController : ControllerBase
                 PermissionId = e.PermissionId,
                 PermissionName = e.PermissionName,
             })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"Permission Not Found");
 
-        if (entity == null)
-            throw new KeyNotFoundException($"Permission Not Found");
-
-        return Ok(ApiResponse<PermissionDto>.Success(entity,$"Get All Succeeded"));
+        return Ok(ApiResponse<PermissionDto>.Success(entity, $"Get All Succeeded"));
     }
 
     [Authorize]
-    [HttpPost]
-    public async Task<IActionResult> Add([FromQuery] PermissionAddDto dto)
+    [HttpPut]
+    public async Task<IActionResult> Put([FromBody] PermissionAddDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -75,14 +75,15 @@ public class PermissionController : ControllerBase
         var entity = await _context.Permissions
             .FirstOrDefaultAsync(e => e.PermissionName == dto.PermissionName && !e.IsDeleted);
 
-        string text;
+        string message = string.Empty;
+        string textLog = string.Empty;
 
         if (entity != null)
             throw new ArgumentException("Permission already exists.");
 
         if (dto.PermissionId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditPermission");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditPermission");
 
             entity = await _context.Permissions
                 .FirstOrDefaultAsync(e => e.PermissionId == dto.PermissionId && !e.IsDeleted)
@@ -90,26 +91,20 @@ public class PermissionController : ControllerBase
 
             if (entity.PermissionName == dto.PermissionName)
             {
-                text = "Permission Exist";
+                message = "Permission Exist";
             }
             else
             {
-                var logId = await _logService.Log("Edit", nameof(Permission), entity.PermissionId);
-
-                await _logService.ChangLog(
-                    logId,
-                    entity.PermissionName.ToString(),
-                    dto.PermissionName.ToString(),
-                    nameof(entity.PermissionName)
-                );
-
                 entity.PermissionName = dto.PermissionName;
-                text = "Edit Succeeded";
+                
+                message = "Edit Succeeded";
+                textLog = "Edit";
             }
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddPermission");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddPermission");
+            
             entity = new Permission
             {
                 PermissionId = Guid.NewGuid(),
@@ -119,16 +114,8 @@ public class PermissionController : ControllerBase
 
             await _context.Permissions.AddAsync(entity);
 
-            var logId = await _logService.Log("Create", nameof(Permission), entity.PermissionId);
-
-            await _logService.ChangLog(
-                logId,
-                "null",
-                entity.PermissionName,
-                nameof(entity.PermissionName)
-            );
-
-            text = "Add Succeeded";
+            message = "Add Succeeded";
+            textLog = "Create";
         }
 
         var newEntityDto = new PermissionDto
@@ -137,14 +124,18 @@ public class PermissionController : ControllerBase
             PermissionName = entity.PermissionName
         };
 
+        var entry = _context.Permissions.Entry(entity);
+
+        await _logService.Log(textLog, nameof(Permission), entity.PermissionId, entry);
+
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<PermissionDto>.Success(newEntityDto, $"{text}"));
+        return Ok(ApiResponse<PermissionDto>.Success(newEntityDto, $"{message}"));
     }
 
     [Authorize]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -156,7 +147,7 @@ public class PermissionController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeletePermission");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeletePermission");
 
         //////////////////////////////////////////////////////
         

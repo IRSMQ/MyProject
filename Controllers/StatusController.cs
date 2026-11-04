@@ -16,11 +16,13 @@ public class StatusController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
+    private readonly TokenService _tokenService;
 
-    public StatusController(ProjectManagementSystemContext context, LogService logService)
+    public StatusController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -36,7 +38,7 @@ public class StatusController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(entity);
+        return Ok(ApiResponse<List<StatusDto>>.Success(entity ,$"Get All Succeeded"));
     }
 
     [HttpGet]
@@ -57,8 +59,8 @@ public class StatusController : ControllerBase
     }
 
     [Authorize]
-    [HttpPost]
-    public async Task<ActionResult<StatusDto>> Add([FromQuery] StatusAddDto dto)
+    [HttpPut]
+    public async Task<ActionResult<StatusDto>> Put([FromBody] StatusAddDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -73,42 +75,37 @@ public class StatusController : ControllerBase
         //////////////////////////////////////////////////////
         
         var entity = await _context.Statuses
-            .FirstOrDefaultAsync(p => p.StatusName == dto.StatusName && !p.IsDeleted);
+            .FirstOrDefaultAsync(e => e.StatusName == dto.StatusName && !e.IsDeleted);
 
         if (entity != null)
             throw new ArgumentException("Status already exists");
 
-        string text;
+        string message = string.Empty;
+        string textLog = string.Empty;
 
         if (dto.StatusId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditStatus");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditStatus");
+
             entity = await _context.Statuses
-                .FirstOrDefaultAsync(p => p.StatusId == dto.StatusId && !p.IsDeleted)
+                .FirstOrDefaultAsync(e => e.StatusId == dto.StatusId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException($"Status Not Found");
 
             if (entity.StatusName == dto.StatusName)
             {
-                text = "Status Exist";
+                message = "Status Exist";
             }
             else
             {
-                var logId = await _logService.Log("Edit", nameof(Status), entity.StatusId);
-
-                await _logService.ChangLog(
-                    logId,
-                    entity.StatusName,
-                    dto.StatusName,
-                    nameof(entity.StatusName)
-                );
-
                 entity.StatusName = dto.StatusName;
-                text = "Edit Succeeded";
+                message = "Edit Succeeded";
+                textLog = "Edit";
             }
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddStatus");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddStatus");
+            
             entity = new Status
             {
                 StatusId = Guid.NewGuid(),
@@ -118,40 +115,28 @@ public class StatusController : ControllerBase
 
             await _context.Statuses.AddAsync(entity);
             
-            var logId = await _logService.Log("Create", nameof(Status), entity.StatusId);
-
-            await _logService.ChangLog(
-                    logId,
-                    "null",
-                    entity.StatusId.ToString(),
-                    nameof(entity.StatusId)
-                );
-
-            await _logService.ChangLog(
-                    logId,
-                    "null",
-                    dto.StatusName,
-                    nameof(entity.StatusName)
-                );
-
-            text = "Add Succeeded";
+            message = "Add Succeeded";
+            textLog = "Create";
         }
         
-
         var newStatus = new StatusDto
         {
             StatusId = entity.StatusId,
             StatusName = entity.StatusName
         };
 
+        var entry = _context.Statuses.Entry(entity);
+        
+        await _logService.Log(textLog, nameof(Status), entity.StatusId, entry);
+
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<StatusDto>.Success(newStatus, $"{text}"));
+        return Ok(ApiResponse<StatusDto>.Success(newStatus, $"{message}"));
     }
 
     [Authorize]
     [HttpDelete]
-    public async Task<ActionResult<StatusDto>> Delete([FromQuery] Guid id)
+    public async Task<ActionResult<StatusDto>> Delete([FromBody] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -163,7 +148,7 @@ public class StatusController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteStatus");
+        await _tokenService.CheckToken(tokenUserId, tokenRoleId, "DeleteStatus");
 
         //////////////////////////////////////////////////////
         
@@ -173,6 +158,7 @@ public class StatusController : ControllerBase
 
 
         /////////////////////////////////////////////////////////
+        
         var entityProject = await _context.Projects
             .Where(e => e.StatusId == id && !e.IsDeleted)
             .ToListAsync();
@@ -181,21 +167,14 @@ public class StatusController : ControllerBase
         {
             foreach (var e in entityProject)
             {
-                var logId = await _logService.Log("Edit", nameof(Project), e.ProjectId);
-
-                await _logService.ChangLog(
-                    logId,
-                    e.StatusId.ToString(),
-                    "null",
-                    nameof(e.StatusId)
-                );
-
                 e.StatusId = null;
+                var entry = _context.Projects.Entry(e);
+                await _logService.Log("Edit", nameof(Project), e.ProjectId, entry);                
             }
         }
 
-
         /////////////////////////////////////////////////////////
+        
         var entityTaskManagement = await _context.TaskManagements
             .Where(e => e.StatusId == id && !e.IsDeleted)
             .ToListAsync();
@@ -204,16 +183,9 @@ public class StatusController : ControllerBase
         {
             foreach (var e in entityTaskManagement)
             {
-                var logId = await _logService.Log("Edit", nameof(TaskManagement), e.TaskManagementId);
-
-                await _logService.ChangLog(
-                    logId,
-                    e.StatusId.ToString(),
-                    "null",
-                    nameof(e.StatusId)
-                );
-
                 e.StatusId = null;
+                var entry = _context.TaskManagements.Entry(e);
+                await _logService.Log("Edit", nameof(TaskManagement), e.TaskManagementId, entry);
             }
         }
 
@@ -229,6 +201,6 @@ public class StatusController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<StatusDto>.Success(newStatus,$"Delete Succeeded"));
+        return Ok(ApiResponse<StatusDto>.Success(newStatus, $"Delete Succeeded"));
     }
 }

@@ -18,18 +18,16 @@ public class UserController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly TokenService _tokenService;
-    private readonly PasswordHassherHandler _passwordHassherHandler;
     private readonly LogService _logService;
 
     public UserController(
         ProjectManagementSystemContext context,
         TokenService tokenService,
-        PasswordHassherHandler passwordHassherHandler,
-        LogService logService)
+        LogService logService
+        )
     {
         _context = context;
         _tokenService = tokenService;
-        _passwordHassherHandler = passwordHassherHandler;
         _logService = logService;
     }
 
@@ -68,8 +66,8 @@ public class UserController : ControllerBase
         return Ok(ApiResponse<UserDto>.Success(UserToDto(user),$"Get By ID Succeeded"));
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Add([FromQuery] UserAddDto dto)
+    [HttpPut]
+    public async Task<IActionResult> SignUp([FromBody] UserAddDto dto)
     {   
 
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
@@ -87,12 +85,12 @@ public class UserController : ControllerBase
         if (entity != null)
             throw new ArgumentException("Username already exists");
 
-        string text;
+        string message = string.Empty;
+        string text = string.Empty;
 
         if (dto.UserId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId,tokenRoleId, "EditUser");
-
+            await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditUser");
 
             entity = await _context.Users
                 .FirstOrDefaultAsync(e => e.UserId == dto.UserId && !e.IsDeleted)
@@ -124,89 +122,52 @@ public class UserController : ControllerBase
             if (!string.IsNullOrEmpty(dto.Username) && entity.Username != dto.Username)
                 entity.Username = dto.Username;
 
-            if (!string.IsNullOrEmpty(dto.UserPassword) && entity.UserPassword != _passwordHassherHandler.Hash(dto.UserPassword))
-                entity.UserPassword = _passwordHassherHandler.Hash(dto.UserPassword);
+            if (!string.IsNullOrEmpty(dto.UserPassword) && entity.UserPassword != PasswordHassherHandler.Hash(dto.UserPassword))
+                entity.UserPassword = PasswordHassherHandler.Hash(dto.UserPassword);
             
-
-            var entry = _context.Entry(entity);
-
-            var modifiedProps = entry.Properties
-                .Where(e => e.IsModified)
-                .Select(e => new
-                {
-                    ColumnName = e.Metadata.Name,
-                    OldVal = e.OriginalValue?.ToString() ?? "null",
-                    NewVal = e.CurrentValue?.ToString() ?? "null"
-                })
-                .ToList();
-
-            if (modifiedProps.Any())
-            {
-                var logId = await _logService.Log("Edit", nameof(Models.User), entity.UserId);
-
-                foreach (var prop in modifiedProps)
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        prop.OldVal,
-                        prop.NewVal,
-                        prop.ColumnName
-                    );
-                }
-            }
-            text = "Edit Succeeded";
+            message = "Edit Succeeded";
+            text = "Edit";
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddUser");
-            if (string.IsNullOrEmpty(dto.Username) || string.IsNullOrEmpty(dto.UserFullName) || string.IsNullOrEmpty(dto.UserPassword))
-                throw new ArgumentException("Username or User FullName or Password is NULL");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddUser");
+            
+            // if (string.IsNullOrEmpty(dto.Username) || string.IsNullOrEmpty(dto.UserFullName) || string.IsNullOrEmpty(dto.UserPassword))
+            //     throw new ArgumentException("Username or User FullName or Password is NULL");
 
             entity = new User
             {
                 UserId = Guid.NewGuid(),
                 RoleId = dto.RoleId,
-                UserFullName = dto.UserFullName,
-                Username = dto.Username,
-                UserPassword = _passwordHassherHandler.Hash(dto.UserPassword),
+                UserFullName = dto.UserFullName!,
+                Username = dto.Username!,
+                UserPassword = PasswordHassherHandler.Hash(dto.UserPassword!),
                 UserEmail = dto.UserEmail,
                 UserPhone = dto.UserPhone
             };
 
-            await _context.Users.AddAsync(entity);
-
-            var logId = await _logService.Log("Create", nameof(Models.User), entity.UserId);
-
-            var entry = _context.Entry(entity);
-            foreach (var prop in entry.Properties)
-            {
-                if (prop.Metadata.Name != "IsDelete")
-                {
-                    await _logService.ChangLog(
-                        logId,
-                        "null",
-                        prop.CurrentValue?.ToString() ?? "null",
-                        prop.Metadata.Name
-                    );
-                }
-            }
-            text = "Add Succeeded";
+            message = "Add Succeeded";
+            text = "Create";
         }
+
+        var entry = _context.Entry(entity);
+
+        await _logService.Log(text, nameof(Models.User), entity.UserId, entry);
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<UserDto>.Success(UserToDto(entity), $"{text}"));
+        return Ok(ApiResponse<UserDto>.Success(UserToDto(entity), $"{message}"));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Login([FromQuery] UserLoginDto userLoginDto)
+    public async Task<IActionResult> Login([FromBody] UserLoginDto userLoginDto)
     {
         var entity = await _context.Users
             .Include(e => e.Role)
             .FirstOrDefaultAsync(e => e.Username == userLoginDto.Username && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User not found");
 
-        var isPasswordValid = _passwordHassherHandler.Verify(userLoginDto.Password, entity.UserPassword);
+        var isPasswordValid = PasswordHassherHandler.Verify(userLoginDto.Password, entity.UserPassword);
 
         if (!isPasswordValid)
             throw new UnauthorizedAccessException("Invalid password");
@@ -225,7 +186,7 @@ public class UserController : ControllerBase
 
     [Authorize]
     [HttpPatch]
-    public async Task<IActionResult> EditStatus([FromQuery] UserEditStatus dto)
+    public async Task<IActionResult> EditStatus([FromBody] UserEditStatus dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -237,7 +198,7 @@ public class UserController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "EditStatusUser");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditStatusUser");
 
         //////////////////////////////////////////////////////
         
@@ -247,17 +208,12 @@ public class UserController : ControllerBase
 
         if (entity.UserStatus != dto.Status)
         {
-            var logId = await _logService.Log("Edit", nameof(Models.User), entity.UserId);
-
-            await _logService.ChangLog(
-                logId,
-                entity.UserStatus.ToString(),
-                dto.Status.ToString(),
-                nameof(entity.UserStatus)
-            );
-            
             entity.UserStatus = dto.Status;
         }
+
+        var entry = _context.Entry(entity);
+
+        await _logService.Log("Edit", nameof(Models.User), entity.UserId, entry);
 
         await _context.SaveChangesAsync();
 
@@ -266,7 +222,7 @@ public class UserController : ControllerBase
 
     [Authorize]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -278,7 +234,7 @@ public class UserController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeleteUser");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteUser");
 
         //////////////////////////////////////////////////////
         

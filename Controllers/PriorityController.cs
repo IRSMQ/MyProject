@@ -15,10 +15,12 @@ public class PriorityController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    public PriorityController(ProjectManagementSystemContext context, LogService logService)
+    private readonly TokenService _tokenService;
+    public PriorityController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
     {
         _context = context;
         _logService = logService;
+        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -34,7 +36,7 @@ public class PriorityController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(ApiResponse<List<PriorityDto>>.Success(entity,$"Get All Succeeded"));
+        return Ok(ApiResponse<List<PriorityDto>>.Success(entity, $"Get All Succeeded"));
     }
 
     [HttpGet]
@@ -51,12 +53,12 @@ public class PriorityController : ControllerBase
             .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Priority Not Found");
 
-        return Ok(ApiResponse<PriorityDto>.Success(entity,$"Get By ID Succeeded"));
+        return Ok(ApiResponse<PriorityDto>.Success(entity, $"Get By ID Succeeded"));
     }
 
     [Authorize]
-    [HttpPost]
-    public async Task<IActionResult> Add([FromQuery] PriorityAddDto dto)
+    [HttpPut]
+    public async Task<IActionResult> Put([FromBody] PriorityAddDto dto)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -76,37 +78,32 @@ public class PriorityController : ControllerBase
         if (entity != null)
             throw new ArgumentException("Priority already exists.");
 
-        string text;
+        string message = string.Empty;
+        string textLog = string.Empty;
 
         if (dto.PriorityId.HasValue)
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "EditPriority");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditPriority");
+            
             entity = await _context.Priorities
                 .FirstOrDefaultAsync(e => e.PriorityId == dto.PriorityId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Priority Not Found");
 
             if (entity.PriorityName == dto.PriorityName)
             {
-                text = "Priority Name Exist";
+                message = "Priority Name Exist";
             }
             else
             {
-                var logId = await _logService.Log("Edit", nameof(Priority), entity.PriorityId);
-
-                await _logService.ChangLog(
-                    logId,
-                    entity.PriorityName.ToString(),
-                    dto.PriorityName.ToString(),
-                    nameof(entity.PriorityName)
-                );
-
                 entity.PriorityName = dto.PriorityName;
-                text = "Edit Succeeded";
+                message = "Edit Succeeded";
+                textLog = "Edit";
             }
         }
         else
         {
-            await _logService.CheckToken(tokenUserId, tokenRoleId, "AddPriority");
+            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddPriority");
+
             entity = new Priority
             {
                 PriorityId = Guid.NewGuid(),
@@ -114,27 +111,23 @@ public class PriorityController : ControllerBase
                 IsDeleted = false
             };
 
-            var logId = await _logService.Log("Create", nameof(Priority), entity.PriorityId);
-
-            await _logService.ChangLog(
-                logId,
-                "null",
-                dto.PriorityName,
-                nameof(entity.PriorityName)
-            );
-
             await _context.Priorities.AddAsync(entity);
-            text = "Add Succeeded";
+            message = "Add Succeeded";
+            textLog = "Crreate";
         }
+
+        var entry = _context.Priorities.Entry(entity);
+
+        await _logService.Log(textLog, nameof(Priority), entity.PriorityId, entry);    
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<PriorityDto>.Success(PriorityToDto(entity), $"{text}"));
+        return Ok(ApiResponse<PriorityDto>.Success(PriorityToDto(entity), $"{message}"));
     }
 
     [Authorize]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] Guid id)
     {
         var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
         var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
@@ -146,7 +139,7 @@ public class PriorityController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _logService.CheckToken(tokenUserId,tokenRoleId, "DeletePtiotity");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeletePtiotity");
 
         //////////////////////////////////////////////////////
         
@@ -158,43 +151,30 @@ public class PriorityController : ControllerBase
 
         await _logService.Log("Delete", nameof(Priority), entity.PriorityId);
 
-
         /////////////////////////////////////////////////////////
+
         var entityProject = await _context.Projects
             .Where(e => e.PriorityId == id && !e.IsDeleted)
             .ToListAsync();
 
         foreach (var e in entityProject)
         {
-            var logId = await _logService.Log("Edit", nameof(Project), e.ProjectId);
-
-            await _logService.ChangLog(
-                logId,
-                e.PriorityId?.ToString() ?? "null",
-                "null",
-                nameof(e.Priority)
-            );
-            
             e.Priority = null;
+            var entry = _context.Projects.Entry(e);
+            await _logService.Log("Edit", nameof(Project), e.ProjectId, entry);
         }
 
-
         /////////////////////////////////////////////////////////
+
         var entityTaskManagement = await _context.TaskManagements
             .Where(e => e.PriorityId == id && !e.IsDeleted)
             .ToListAsync();
 
         foreach (var e in entityTaskManagement)
         {
-            var logId = await _logService.Log("Edit", nameof(TaskManagement), e.TaskManagementId);
-            await _logService.ChangLog(
-                logId,
-                e.PriorityId?.ToString() ?? "null",
-                "null",
-                nameof(e.PriorityId)
-            );
-
             e.PriorityId = null;
+            var entry = _context.TaskManagements.Entry(e);
+            await _logService.Log("Edit", nameof(TaskManagement), e.TaskManagementId, entry);
         }
 
         await _context.SaveChangesAsync();
