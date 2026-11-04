@@ -13,13 +13,13 @@ namespace Test26.Controller;
 
 [ApiController]
 [Route("api/[controller]/[action]")]
-public class FilesController : ControllerBase
+public class FileController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly IWebHostEnvironment _env;
     private readonly LogService _logService;
 
-    public FilesController(
+    public FileController(
         ProjectManagementSystemContext context,
         IWebHostEnvironment env,
         LogService logService
