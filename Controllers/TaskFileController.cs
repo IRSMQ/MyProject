@@ -12,13 +12,13 @@ namespace Test26.Controller;
 
 [ApiController]
 [Route("api/[controller]/[action]")]
-public class TaskDocumentController : ControllerBase
+public class TaskFileController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
     private readonly TokenService _tokenService;
 
-    public TaskDocumentController(
+    public TaskFileController(
         ProjectManagementSystemContext context,
         LogService logService,
         TokenService tokenService
