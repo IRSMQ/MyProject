@@ -87,7 +87,6 @@ public class RoleController : ControllerBase
         if (dto.RoleId.HasValue)
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditRole");
-
             entity = await _context.Roles
                 .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Role Not Found");
@@ -106,7 +105,6 @@ public class RoleController : ControllerBase
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddRole");
-
             entity = new Role
             {
                 RoleId = Guid.NewGuid(),
@@ -127,7 +125,6 @@ public class RoleController : ControllerBase
         };
 
         var entry = _context.Roles.Entry(entity);
-
         await _logService.Log(textLog, nameof(Role), entity.RoleId, entry);
 
         await _context.SaveChangesAsync();

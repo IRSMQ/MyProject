@@ -18,51 +18,25 @@ public class FilesController : ControllerBase
     private readonly ProjectManagementSystemContext _context;
     private readonly IWebHostEnvironment _env;
     private readonly LogService _logService;
-    private readonly TokenService _tokenService;
 
     public FilesController(
         ProjectManagementSystemContext context,
         IWebHostEnvironment env,
-        LogService logService,
-        TokenService tokenService
+        LogService logService
         )
     {
         _context = context;
         _env = env;
         _logService = logService;
-        _tokenService = tokenService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var entity = await _context.Documents
-            .Where(e => !e.IsDeleted)
             .ToListAsync();
 
         return Ok(ApiResponse<List<Models.Document>>.Success(entity, "Get All Succeeded"));
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> Download([FromQuery] Guid id)
-    {
-        var entity = await _context.Documents
-            .FirstOrDefaultAsync(e => e.DocumentId == id && !e.IsDeleted)
-            ?? throw new KeyNotFoundException("File Not Found");
-
-        if (!System.IO.File.Exists(entity.FilePath))
-            return NotFound("File Not Exist");
-
-        var memory = new MemoryStream();
-
-        using (var stream = new FileStream(entity.FilePath, FileMode.Open, FileAccess.Read))
-        {
-            await stream.CopyToAsync(memory);
-        }
-
-        memory.Position = 0;
-
-        return File(memory, entity.ContentType, entity.FileName);
     }
 
     [Authorize]
@@ -80,15 +54,12 @@ public class FilesController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _tokenService.CheckToken(tokenUserId, tokenRoleId, "UploadFile");
-
         ////////////////////////////////////////////////////// 
         
         if (dto.File == null || dto.File.Length == 0)
             return BadRequest("فایلی ارسال نشده است");
 
         var uploadsFolder = Path.Combine(_env.ContentRootPath, "Uploads");
-
         if (!Directory.Exists(uploadsFolder))
             Directory.CreateDirectory(uploadsFolder);
 
@@ -97,9 +68,11 @@ public class FilesController : ControllerBase
         var fullPath = Path.Combine(uploadsFolder, uniqueFileName);
 
         using (var stream = new FileStream(fullPath, FileMode.Create))
+        {
             await dto.File.CopyToAsync(stream);
+        }
 
-        var newFile = new Models.Document
+        var doc = new Models.Document
         {
             DocumentId = Guid.NewGuid(),
             FileName = dto.File.FileName,
@@ -109,45 +82,36 @@ public class FilesController : ControllerBase
             FileSize = dto.File.Length
         };
 
-        await _context.Documents.AddAsync(newFile);
+        await _context.Documents.AddAsync(doc);
 
-        var entry = _context.Entry(newFile);
+        var entry = _context.Entry(doc);
 
-        await _logService.Log("Create", nameof(Models.Document), newFile.DocumentId, entry);
+        await _logService.Log("Create", nameof(Models.Document), doc.DocumentId, entry);
 
         await _context.SaveChangesAsync();
 
-        return Ok(new { newFile.DocumentId, newFile.FileName });
+        return Ok(new { doc.DocumentId, doc.FileName });
     }
 
-    [Authorize]
-    [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    [HttpGet]
+    public async Task<IActionResult> Download([FromQuery] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId, tokenRoleId, "DeleteFile");
-
-        ////////////////////////////////////////////////////// 
-        
         var entity = await _context.Documents
-            .FirstOrDefaultAsync(e => e.DocumentId == id && !e.IsDeleted)
+            .FindAsync(id)
             ?? throw new KeyNotFoundException("File Not Found");
 
-        entity.IsDeleted = true;
+        if (!System.IO.File.Exists(entity.FilePath))
+            return NotFound("File Not Exist");
 
-        await _logService.Log("Delete", nameof(Models.Document), entity.DocumentId);
+        var memory = new MemoryStream();
 
-        await _context.SaveChangesAsync();
+        using (var stream = new FileStream(entity.FilePath, FileMode.Open, FileAccess.Read))
+        {
+            await stream.CopyToAsync(memory);
+        }
 
-        return Ok($"File With ID: {entity.DocumentId} Deleted");
+        memory.Position = 0;
+
+        return File(memory, entity.ContentType, entity.FileName);
     }
 }

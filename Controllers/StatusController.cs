@@ -148,7 +148,7 @@ public class StatusController : ControllerBase
         else
             throw new UnauthorizedAccessException("Token Role Is Null");
 
-        await _tokenService.CheckToken(tokenUserId, tokenRoleId, "DeleteStatus");
+        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteStatus");
 
         //////////////////////////////////////////////////////
         

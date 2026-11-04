@@ -106,20 +106,6 @@ public class ProjectController : ControllerBase
         if (entity != null)
             throw new ArgumentException("Project already exists.");
 
-        if (dto.ManagerId.HasValue)
-        {
-            var entityUser = await _context.Users
-                .Include(e => e.Role)
-                .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
-                ?? throw new KeyNotFoundException("User Not Found");
-
-            if (entityUser.RoleId == null)
-                throw new ArgumentException("Role Is Null");
-
-            if (entityUser.Role!.RoleName != "Manager")
-                throw new ArgumentException("Role Is Not Manager");
-        }
-
         string message = string.Empty;
         string textLog = string.Empty;
 
@@ -139,6 +125,17 @@ public class ProjectController : ControllerBase
                 entity.Desc = dto.Description;
             }
 
+            if (dto.ManagerId.HasValue)
+            {
+                var entityUser = await _context.Users
+                    .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
+                    ?? throw new KeyNotFoundException("Manager Not Found");
+
+                await _tokenService.CheckToken(entityUser.UserId, entityUser.RoleId, "ProjectManager");
+
+                entity.ManagerId = dto.ManagerId.Value;
+            }
+
             if (dto.PriorityId.HasValue)
                 entity.PriorityId = dto.PriorityId;
 
@@ -154,15 +151,27 @@ public class ProjectController : ControllerBase
                 entity.ProjectName = dto.ProjectName;
             }
 
-            if (string.IsNullOrEmpty(dto.Description))
-                entity.Desc = dto.Description;
-                
+            entity.Desc = dto.Description ?? entity.Desc;
             message = "Edit Succeeded";
             textLog = "Edit";
         }
         else
         {
             await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddProject");
+
+            if (dto.ManagerId.HasValue)
+            {
+                var entityUser = await _context.Users
+                    .Include(e => e.Role)
+                    .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
+                    ?? throw new KeyNotFoundException("User Not Found");
+
+                if (entityUser.RoleId == null)
+                    throw new ArgumentException("Role Is Null");
+
+                if (entityUser.Role!.RoleName != "Manager")
+                    throw new ArgumentException("Role Is Not Manager");
+            }
 
             entity = new Project
             {
@@ -180,7 +189,6 @@ public class ProjectController : ControllerBase
             };
 
             await _context.Projects.AddAsync(entity);
-
             message = "Add Succeeded";
             textLog = "Create";
         }
