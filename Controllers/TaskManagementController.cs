@@ -132,9 +132,9 @@ public class TaskManagementController : ControllerBase
 
         entity.StatusId = dto.ObjectId;
 
+        var entry = _context.Entry(entity);
 
-
-        await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId);
+        await _logService.Log("Edit", nameof(TaskManagement), entity.TaskManagementId, entry);
 
         await _context.SaveChangesAsync();
 

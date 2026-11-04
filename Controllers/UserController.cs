@@ -217,7 +217,7 @@ public class UserController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<UserDto>.Success(UserToDto(entity),$"Edit Status Succeeded"));
+        return Ok(ApiResponse<UserDto>.Success(UserToDto(entity), $"Edit Status Succeeded"));
     }
 
     [Authorize]
@@ -288,11 +288,12 @@ public class UserController : ControllerBase
         }
 
         entity.IsDeleted = true;
+        
         await _logService.Log("Delete", nameof(Models.User), entity.UserId);
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<UserDto>.Success(UserToDto(entity),$"Delete Succeeded"));
+        return Ok(ApiResponse<UserDto>.Success(UserToDto(entity), $"Delete Succeeded"));
     }
 
     private static UserDto UserToDto(User user)
