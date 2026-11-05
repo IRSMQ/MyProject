@@ -17,12 +17,19 @@ public class UserPermissionController : ControllerBase
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
     private readonly TokenService _tokenService;
+    private readonly IAuthorizationService _authorizationService;
 
-    public UserPermissionController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
+    public UserPermissionController(
+        ProjectManagementSystemContext context,
+        LogService logService,
+        TokenService tokenService,
+        IAuthorizationService authorizationService
+        )
     {
         _context = context;
         _logService = logService;
         _tokenService = tokenService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -115,18 +122,6 @@ public class UserPermissionController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> Put([FromBody] UserPermissionDtoAdd dto)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        //////////////////////////////////////////////////////
-        
         var entity = await _context.UserPermissions
             .FirstOrDefaultAsync(e => e.PermissionId == dto.PermissionId && e.UserId == dto.UserId && !e.IsDeleted);
 
@@ -147,7 +142,8 @@ public class UserPermissionController : ControllerBase
 
         if (dto.UserPermissionId.HasValue)
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditUserPermission");
+            if (!(await _authorizationService.AuthorizeAsync(User, "UserPermission.Create")).Succeeded)
+                return Forbid();
             
             entity = await _context.UserPermissions
                 .FirstOrDefaultAsync(e => e.UserPermissionId == dto.UserPermissionId && !e.IsDeleted)
@@ -170,13 +166,14 @@ public class UserPermissionController : ControllerBase
         }
         else
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddUserPermission");
+            if (!(await _authorizationService.AuthorizeAsync(User, "UserPermission.Create")).Succeeded)
+                return Forbid();
 
             entity = new UserPermission
             {
                 UserPermissionId = Guid.NewGuid(),
-                PermissionId = dto.PermissionId.Value,
-                UserId = dto.UserId.Value
+                PermissionId = dto.PermissionId!.Value,
+                UserId = dto.UserId!.Value
             };
 
             await _context.UserPermissions.AddAsync(entity);
@@ -203,24 +200,10 @@ public class UserPermissionController : ControllerBase
         return Ok(ApiResponse<UserPermissionDto>.Success(entityDto,$"{message}"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "UserPermission.Delete")]
     [HttpDelete]
     public async Task<IActionResult> Delete([FromBody] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteUserPermission");
-
-        //////////////////////////////////////////////////////
-
         var entity = await _context.UserPermissions
             .FirstOrDefaultAsync(e => e.UserPermissionId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User Permission Not Found");

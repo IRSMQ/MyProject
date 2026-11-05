@@ -19,16 +19,19 @@ public class UserController : ControllerBase
     private readonly ProjectManagementSystemContext _context;
     private readonly TokenService _tokenService;
     private readonly LogService _logService;
+    private readonly IAuthorizationService _authorizationService;
 
     public UserController(
         ProjectManagementSystemContext context,
         TokenService tokenService,
-        LogService logService
+        LogService logService,
+        IAuthorizationService authorizationService
         )
     {
         _context = context;
         _tokenService = tokenService;
         _logService = logService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -69,17 +72,6 @@ public class UserController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> SignUp([FromBody] UserAddDto dto)
     {   
-
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
         var entity = await _context.Users
             .FirstOrDefaultAsync(e => e.Username == dto.Username && !e.IsDeleted);
         if (entity != null)
@@ -90,7 +82,8 @@ public class UserController : ControllerBase
 
         if (dto.UserId.HasValue)
         {
-            await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditUser");
+            if (!(await _authorizationService.AuthorizeAsync(User, "Uesr.Edit")).Succeeded)
+                return Forbid();
 
             entity = await _context.Users
                 .FirstOrDefaultAsync(e => e.UserId == dto.UserId && !e.IsDeleted)
@@ -129,9 +122,7 @@ public class UserController : ControllerBase
             text = "Edit";
         }
         else
-        {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddUser");
-            
+        {   
             // if (string.IsNullOrEmpty(dto.Username) || string.IsNullOrEmpty(dto.UserFullName) || string.IsNullOrEmpty(dto.UserPassword))
             //     throw new ArgumentException("Username or User FullName or Password is NULL");
 
@@ -184,24 +175,10 @@ public class UserController : ControllerBase
         return Ok(ApiResponse<UserToken>.Success(newEntity, $"Login Succeeded"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "User.Status.Edit")]
     [HttpPatch]
     public async Task<IActionResult> EditStatus([FromBody] UserEditStatus dto)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditStatusUser");
-
-        //////////////////////////////////////////////////////
-        
         var entity = await _context.Users
             .FirstOrDefaultAsync(e => e.UserId == dto.Id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User not Found");
@@ -220,24 +197,10 @@ public class UserController : ControllerBase
         return Ok(ApiResponse<UserDto>.Success(UserToDto(entity), $"Edit Status Succeeded"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "User.Delete")]
     [HttpDelete]
     public async Task<IActionResult> Delete([FromBody] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteUser");
-
-        //////////////////////////////////////////////////////
-        
         var entity = await _context.Users
             .FirstOrDefaultAsync(e => e.UserId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User not Found");

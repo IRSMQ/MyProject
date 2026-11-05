@@ -18,12 +18,19 @@ public class TaskUserController : ControllerBase
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
     private readonly TokenService _tokenService;
+    private readonly IAuthorizationService _authorizationService;
 
-    public TaskUserController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
+    public TaskUserController(
+        ProjectManagementSystemContext context,
+        LogService logService,
+        TokenService tokenService,
+        IAuthorizationService authorizationService
+        )
     {
         _context = context;
         _logService = logService;
         _tokenService = tokenService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -116,24 +123,6 @@ public class TaskUserController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> Put([FromBody] TaskUserDtoAdd dto)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        //////////////////////////////////////////////////////
-        
-        TaskUser? entity = await _context.TaskUsers
-            .FirstOrDefaultAsync(e => e.TaskId == dto.TaskId && e.UserId == dto.UserId && !e.IsDeleted);
-
-        if (entity != null)
-            throw new ArgumentException("Task User Exist");
-
         // var entityTaskManagements = await _context.TaskManagements
         //     .FirstOrDefaultAsync(e => e.TaskManagementId == dto.TaskId && !e.IsDeleted)
         //     ?? throw new KeyNotFoundException("Task Not Found");
@@ -142,22 +131,30 @@ public class TaskUserController : ControllerBase
         //     .FirstOrDefaultAsync(e => e.UserId == dto.UserId && !e.IsDeleted)
         //     ?? throw new KeyNotFoundException("User Not Found");
 
-        var entityUserProject = await _context.UserProjects
-            .Where(e => e.UserId == dto.UserId)
-            .ToListAsync();
+        // var entityUserProject = await _context.UserProjects
+        //     .Where(e => e.UserId == dto.UserId)
+        //     .ToListAsync();
 
 
         var tud = new TaskUserDto();
         string message = string.Empty;
         string text = string.Empty;
+        var entity = new TaskUser();
 
         if (dto.TaskUserId.HasValue)
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditTaskUser");
+            if (!(await _authorizationService.AuthorizeAsync(User, "TaskUser.Edit")).Succeeded)
+                return Forbid();
 
             entity = await _context.TaskUsers
                 .FirstOrDefaultAsync(e => e.TaskUserId == dto.TaskUserId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Task User ID Not Found");
+
+            var entityExist = await _context.TaskUsers
+                .AnyAsync(e => e.TaskId == dto.TaskId && e.UserId == dto.UserId && !e.IsDeleted);
+
+            if (entityExist)
+                throw new ArgumentException("Task User Exist");
 
             // bool check = true;
 
@@ -180,16 +177,13 @@ public class TaskUserController : ControllerBase
                 entity.UserId = dto.UserId.Value;
             }
 
-            tud.TaskId = entity.TaskId;
-            tud.UserId = entity.UserId;
-            tud.TaskName = entity.Task.Title;
-            tud.UserName = entity.User.UserFullName;
             message = "Edit Succeeded";
             text = "Edit";
         }
         else
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddTaskUser");
+            if (!(await _authorizationService.AuthorizeAsync(User, "TaskUser.Create")).Succeeded)
+                return Forbid();
 
             // bool check = true;
 
@@ -213,13 +207,14 @@ public class TaskUserController : ControllerBase
 
             await _context.TaskUsers.AddAsync(entity);
 
-            tud.TaskId = entity.TaskId;
-            tud.UserId = entity.UserId;
-            tud.TaskName = entity.Task.Title;
-            tud.UserName = entity.User.UserFullName;
             message = "Add Succeeded";
             text = "Create";
         }
+
+        tud.TaskId = entity.TaskId;
+        tud.UserId = entity.UserId;
+        tud.TaskName = entity.Task.Title;
+        tud.UserName = entity.User.UserFullName;
 
         var entry = _context.Entry(entity);
 
@@ -227,27 +222,13 @@ public class TaskUserController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<TaskUserDto>.Success(tud,$"{message}"));
+        return Ok(ApiResponse<TaskUserDto>.Success(tud, $"{message}"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "TaskUser.Delete")]
     [HttpDelete]
     public async Task<IActionResult> Delete([FromBody] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteTaskUser");
-
-        //////////////////////////////////////////////////////
-        
         var entity = await _context.TaskUsers
             .FirstOrDefaultAsync(e => e.TaskUserId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Task User Not Found");

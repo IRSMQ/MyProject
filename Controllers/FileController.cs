@@ -39,7 +39,7 @@ public class FileController : ControllerBase
         return Ok(ApiResponse<List<Models.Document>>.Success(entity, "Get All Succeeded"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "File.Upload")]
     [HttpPost]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Upload([FromForm] FileUpLoadDto dto)
@@ -113,5 +113,20 @@ public class FileController : ControllerBase
         memory.Position = 0;
 
         return File(memory, entity.ContentType, entity.FileName);
+    }
+
+    [Authorize(Policy = "File.Delete")]
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    {
+        var entity = await _context.Documents
+            .FindAsync(id)
+            ?? throw new KeyNotFoundException("File Not Found");
+
+        entity.IsDeleted = true;
+
+        await _logService.Log("Delete", nameof(Models.Document), entity.DocumentId);
+
+        return Ok($"File Deleted\nID: {entity.DocumentId}");
     }
 }

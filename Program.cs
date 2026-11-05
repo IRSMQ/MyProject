@@ -9,6 +9,7 @@ using Test26.ApiR;
 using System.Text.Json;
 using Test26.PasswordHassher;
 using Scalar.AspNetCore;
+using Microsoft.AspNetCore.Authorization;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -69,6 +70,9 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
+
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, DynamicPermissionPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
 builder.Services.AddHttpContextAccessor();
 

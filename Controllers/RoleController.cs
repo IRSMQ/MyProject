@@ -16,13 +16,16 @@ public class RoleController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    private readonly TokenService _tokenService;
-
-    public RoleController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
+    private readonly IAuthorizationService _authorizationService;
+    public RoleController(
+        ProjectManagementSystemContext context,
+        LogService logService,
+        IAuthorizationService authorizationService
+        )
     {
         _context = context;
         _logService = logService;
-        _tokenService = tokenService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -62,31 +65,17 @@ public class RoleController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> Put([FromBody] RoleDto dto)
     {
-
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        //////////////////////////////////////////////////////
-        
-        var entity = await _context.Roles
-            .FirstOrDefaultAsync(e => e.RoleName == dto.RoleName && !e.IsDeleted);
-
-        if (entity != null)
-            throw new ArgumentException("Role already exists");
+        var entity = new Role();
 
         string message = string.Empty;
         string textLog = string.Empty;
 
         if (dto.RoleId.HasValue)
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditRole");
+            var result = await _authorizationService.AuthorizeAsync(User, "Role.Edit");
+            if (!result.Succeeded)
+                return Forbid();
+
             entity = await _context.Roles
                 .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && !e.IsDeleted)
                 ?? throw new KeyNotFoundException("Role Not Found");
@@ -104,7 +93,10 @@ public class RoleController : ControllerBase
         }
         else
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddRole");
+            var result = await _authorizationService.AuthorizeAsync(User, "Role.Create");
+            if (!result.Succeeded)
+                return Forbid();
+
             entity = new Role
             {
                 RoleId = Guid.NewGuid(),
@@ -132,24 +124,10 @@ public class RoleController : ControllerBase
         return Ok(ApiResponse<RoleDto>.Success(newEntity, $"{message}"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "Role.Delete")]
     [HttpDelete]
     public async Task<IActionResult> Delete([FromBody] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteRole");
-
-        //////////////////////////////////////////////////////
-        
         var entity = await _context.Roles
             .FirstOrDefaultAsync(e => e.RoleId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException($"Role Not Found");

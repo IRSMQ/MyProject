@@ -16,17 +16,17 @@ public class TaskFileController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    private readonly TokenService _tokenService;
+    private readonly IAuthorizationService _authorizationService;
 
     public TaskFileController(
         ProjectManagementSystemContext context,
         LogService logService,
-        TokenService tokenService
+        IAuthorizationService authorizationService
     )
     {
         _context = context;
         _logService = logService;
-        _tokenService = tokenService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -74,23 +74,14 @@ public class TaskFileController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> Put(TaskDocumentAddDto dto)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
         string message = string.Empty;
         string textLog = string.Empty;
         TaskDocument entity;
 
         if (dto.TaskDocumentId.HasValue)
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditTaskDocument");
+            if (!(await _authorizationService.AuthorizeAsync(User, "TaskFile.Edit")).Succeeded)
+                return Forbid();
 
             entity = await _context.TaskDocuments
                 .Include(e => e.Task)
@@ -109,7 +100,8 @@ public class TaskFileController : ControllerBase
         }
         else
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "CreateTaskDocument");
+            if (!(await _authorizationService.AuthorizeAsync(User, "TaskFile.Create")).Succeeded)
+                return Forbid();
 
             if (!dto.TaskId.HasValue || !dto.DocumentId.HasValue)
                 throw new ArgumentException("Task ID or Document ID is Null");
@@ -154,23 +146,10 @@ public class TaskFileController : ControllerBase
         return Ok(ApiResponse<TaskDocumentDto>.Success(newEntity, $"{message}"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "TaskFile.Delete")]
     [HttpDelete]
     public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId, tokenRoleId, "DeleteTaskDocument");
-
-
         var entity = await _context.TaskDocuments
             .Include(e => e.Document)
             .Include(e => e.Task)

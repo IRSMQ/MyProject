@@ -15,12 +15,16 @@ public class PriorityController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    private readonly TokenService _tokenService;
-    public PriorityController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
+    private readonly IAuthorizationService _authorizationService;
+    public PriorityController(
+        ProjectManagementSystemContext context,
+        LogService logService,
+        IAuthorizationService authorizationService
+        )
     {
         _context = context;
         _logService = logService;
-        _tokenService = tokenService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -60,30 +64,16 @@ public class PriorityController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> Put([FromBody] PriorityAddDto dto)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        //////////////////////////////////////////////////////
-        
-        var entity = await _context.Priorities
-            .FirstOrDefaultAsync(e => e.PriorityName == dto.PriorityName && !e.IsDeleted);
-
-        if (entity != null)
-            throw new ArgumentException("Priority already exists.");
+        var entity = new Priority();
 
         string message = string.Empty;
         string textLog = string.Empty;
 
         if (dto.PriorityId.HasValue)
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditPriority");
+            var result = await _authorizationService.AuthorizeAsync(User, "Priority.Edit");
+            if (!result.Succeeded)
+                return Forbid();
             
             entity = await _context.Priorities
                 .FirstOrDefaultAsync(e => e.PriorityId == dto.PriorityId && !e.IsDeleted)
@@ -102,7 +92,10 @@ public class PriorityController : ControllerBase
         }
         else
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddPriority");
+            var result = await _authorizationService.AuthorizeAsync(User, "Priority.Create");
+            if (!result.Succeeded)
+                return Forbid();
+
             entity = new Priority
             {
                 PriorityId = Guid.NewGuid(),
@@ -124,24 +117,10 @@ public class PriorityController : ControllerBase
         return Ok(ApiResponse<PriorityDto>.Success(PriorityToDto(entity), $"{message}"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "Priority.Delete")]
     [HttpDelete]
     public async Task<IActionResult> Delete([FromBody] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeletePtiotity");
-
-        //////////////////////////////////////////////////////
-        
         var entity = await _context.Priorities
             .FirstOrDefaultAsync(e => e.PriorityId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException($"Priority Not Found");

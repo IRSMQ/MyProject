@@ -7,6 +7,7 @@ using Test26.DTOs;
 using Test26.ApiR;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 namespace Test26.Controller;
 [ApiController]
 [Route("api/[controller]/[action]")]
@@ -15,12 +16,19 @@ public class ProjectController : ControllerBase
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
     private readonly TokenService _tokenService;
+    private readonly IAuthorizationService _authorizationService;
 
-    public ProjectController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
+    public ProjectController(
+        ProjectManagementSystemContext context,
+        LogService logService,
+        TokenService tokenService,
+        IAuthorizationService authorizationService
+        )
     {
         _context = context;
         _logService = logService;
         _tokenService = tokenService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -88,30 +96,16 @@ public class ProjectController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> Put([FromBody] CreateProject dto)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new ArgumentException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        //////////////////////////////////////////////////////
-        
-        var entity = await _context.Projects
-            .FirstOrDefaultAsync(e => e.ProjectName == dto.ProjectName && !e.IsDeleted);
-
-        if (entity != null)
-            throw new ArgumentException("Project already exists.");
+        var entity = new Project();
 
         string message = string.Empty;
         string textLog = string.Empty;
 
         if (dto.ProjectId.HasValue)
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditProject");
+            var result = await _authorizationService.AuthorizeAsync(User, "Project.Edit");
+            if (!result.Succeeded)
+                return Forbid();
 
             entity = await _context.Projects
                 .FirstOrDefaultAsync(e => e.ProjectId == dto.ProjectId && !e.IsDeleted)
@@ -145,8 +139,10 @@ public class ProjectController : ControllerBase
             if (!string.IsNullOrWhiteSpace(dto.ProjectName))
             {
                 var existsProject = await _context.Projects
-                    .FirstOrDefaultAsync(e => e.ProjectName == dto.ProjectName && e.ProjectId != entity.ProjectId && !e.IsDeleted)
-                    ?? throw new ArgumentException("Project Name Exist");
+                    .AnyAsync(e => e.ProjectName == dto.ProjectName && e.ProjectId != entity.ProjectId && !e.IsDeleted);
+
+                if (existsProject)
+                    throw new ArgumentException("Project Name Exist");
 
                 entity.ProjectName = dto.ProjectName;
             }
@@ -157,7 +153,9 @@ public class ProjectController : ControllerBase
         }
         else
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddProject");
+            var result = await _authorizationService.AuthorizeAsync(User, "Project.Create");
+            if (!result.Succeeded)
+                return Forbid();
 
             if (dto.ManagerId.HasValue)
             {
@@ -202,24 +200,10 @@ public class ProjectController : ControllerBase
         return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity), $"Add Succeeded"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "Project.Date.Edit")]
     [HttpPut]
     public async Task<IActionResult> EditDate([FromBody] EditAllDate dto)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "EditDateProject");
-
-        //////////////////////////////////////////////////////
-        
         var entity = await _context.Projects
             .FirstOrDefaultAsync(e => e.ProjectId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Project Not Found");
@@ -257,24 +241,10 @@ public class ProjectController : ControllerBase
         return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Edit Date Succeeded"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "Project.Delete")]
     [HttpDelete]
     public async Task<IActionResult> Delete([FromBody] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new ArgumentException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteProject");
-
-        //////////////////////////////////////////////////////
-        
         var entity = await _context.Projects
             .FirstOrDefaultAsync(e => e.ProjectId == id && !e.IsDeleted);
 

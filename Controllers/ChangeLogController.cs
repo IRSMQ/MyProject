@@ -18,13 +18,14 @@ public class ChangeLogController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    private readonly TokenService _tokenService;
 
-    public ChangeLogController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
+    public ChangeLogController(
+        ProjectManagementSystemContext context,
+        LogService logService
+        )
     {
         _context = context;
         _logService = logService;
-        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -90,24 +91,10 @@ public class ChangeLogController : ControllerBase
         return Ok(ApiResponse<ChangeLogDto>.Success(newEntity, $"Get By ID Succeeded"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "ChangeLog.Delete")]
     [HttpDelete]
     public async Task<IActionResult> Delete([FromBody] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteChangeLog");
-
-        //////////////////////////////////////////////////////
-        
         var entity = await _context.ChangeLogs
             .FirstOrDefaultAsync(e => e.ChangeLogId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("There are no Change Log with this ID");

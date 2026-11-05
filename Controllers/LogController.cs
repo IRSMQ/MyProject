@@ -18,13 +18,14 @@ public class LogController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    private readonly TokenService _tokenService;
 
-    public LogController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
+    public LogController(
+        ProjectManagementSystemContext context,
+        LogService logService
+        )
     {
         _context = context;
         _logService = logService;
-        _tokenService = tokenService;
     }
 
     [HttpGet]
@@ -70,24 +71,10 @@ public class LogController : ControllerBase
         return Ok(ApiResponse<LogDto>.Success(newEntity, $"Get By ID Succeeded"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "Log.Delete")]
     [HttpDelete]
     public async Task<IActionResult> Delete([FromBody] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteLog");
-
-        //////////////////////////////////////////////////////
-        
         var entity = await _context.Logs
             .FirstOrDefaultAsync(e => e.LogId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException("There are no Change Log with this ID");

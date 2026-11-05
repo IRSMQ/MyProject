@@ -16,13 +16,17 @@ public class StatusController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    private readonly TokenService _tokenService;
+    private readonly IAuthorizationService _authorizationService;
 
-    public StatusController(ProjectManagementSystemContext context, LogService logService, TokenService tokenService)
+    public StatusController(
+        ProjectManagementSystemContext context,
+        LogService logService,
+        IAuthorizationService authorizationService
+        )
     {
         _context = context;
         _logService = logService;
-        _tokenService = tokenService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -62,30 +66,21 @@ public class StatusController : ControllerBase
     [HttpPut]
     public async Task<ActionResult<StatusDto>> Put([FromBody] StatusAddDto dto)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
+        // var entity = await _context.Statuses
+        //     .FirstOrDefaultAsync(e => e.StatusName == dto.StatusName && !e.IsDeleted);
 
-        Guid tokenRoleId;
+        // if (entity != null)
+        //     throw new ArgumentException("Status already exists");
 
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        //////////////////////////////////////////////////////
-        
-        var entity = await _context.Statuses
-            .FirstOrDefaultAsync(e => e.StatusName == dto.StatusName && !e.IsDeleted);
-
-        if (entity != null)
-            throw new ArgumentException("Status already exists");
+        var entity = new Status();
 
         string message = string.Empty;
         string textLog = string.Empty;
 
         if (dto.StatusId.HasValue)
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "EditStatus");
+            if (!(await _authorizationService.AuthorizeAsync(User, "Status.Edit")).Succeeded)
+                return Forbid();
 
             entity = await _context.Statuses
                 .FirstOrDefaultAsync(e => e.StatusId == dto.StatusId && !e.IsDeleted)
@@ -104,7 +99,8 @@ public class StatusController : ControllerBase
         }
         else
         {
-            await _tokenService.CheckToken(tokenUserId, tokenRoleId, "AddStatus");
+            if (!(await _authorizationService.AuthorizeAsync(User, "Status.Create")).Succeeded)
+                return Forbid();
             
             entity = new Status
             {
@@ -134,24 +130,10 @@ public class StatusController : ControllerBase
         return Ok(ApiResponse<StatusDto>.Success(newStatus, $"{message}"));
     }
 
-    [Authorize]
+    [Authorize(Policy = "Status.Delete")]
     [HttpDelete]
     public async Task<ActionResult<StatusDto>> Delete([FromBody] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId,tokenRoleId, "DeleteStatus");
-
-        //////////////////////////////////////////////////////
-        
         var entity = await _context.Statuses
             .FirstOrDefaultAsync(e => e.StatusId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException($"Status Not Found");
