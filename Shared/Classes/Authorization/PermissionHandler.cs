@@ -20,7 +20,7 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
         var userIdClaim = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
         var roleIdClaim = context.User.FindFirstValue(ClaimTypes.Role);
 
-        if (string.IsNullOrEmpty(userIdClaim) || string.IsNullOrEmpty(userIdClaim))
+        if (string.IsNullOrEmpty(userIdClaim) || string.IsNullOrEmpty(roleIdClaim))
             return;
 
         var userId = Guid.Parse(userIdClaim);
