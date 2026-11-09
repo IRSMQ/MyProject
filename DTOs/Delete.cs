@@ -2,5 +2,5 @@ namespace Test26.DTOs;
 
 public class DeleteID
 {
-    public Guid ID;
+    public Guid ID { get; set; }
 }
