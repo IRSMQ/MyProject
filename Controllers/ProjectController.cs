@@ -150,6 +150,18 @@ public class ProjectController : ControllerBase
                 entity.ProjectName = dto.ProjectName;
             }
 
+            if (dto.CreationDate.HasValue)
+                entity.CreationDate = dto.CreationDate;
+
+            if (dto.StartDate.HasValue)
+                entity.StartDate = dto.StartDate;
+
+            if (dto.DueDate.HasValue)
+                entity.DueDate = dto.DueDate;
+
+            if (dto.EndDate.HasValue)
+                entity.EndDate = dto.EndDate;
+
             entity.Desc = dto.Description ?? entity.Desc;
             message = "Edit Succeeded";
             textLog = "Edit";
@@ -200,7 +212,7 @@ public class ProjectController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity), $"{message}"));
+        return Ok(ApiResponse<ProjectDto>.Success(await ProjectToDto(entity), $"{message}"));
     }
 
     [Authorize(Policy = "Project.Date.Edit")]
@@ -241,7 +253,7 @@ public class ProjectController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Edit Date Succeeded"));
+        return Ok(ApiResponse<ProjectDto>.Success(await ProjectToDto(entity),$"Edit Date Succeeded"));
     }
 
     [Authorize(Policy = "Project.Delete")]
@@ -290,27 +302,33 @@ public class ProjectController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity),$"Delete Succeeded"));
+        return Ok(ApiResponse<ProjectDto>.Success(await ProjectToDto(entity), $"Delete Succeeded"));
     }
 
 
-    private ProjectDto ProjectToDto(Project entity)
+    private async Task<ProjectDto> ProjectToDto(Project en)
     {
+        var entity = await _context.Projects
+            .Include(e => e.Status)
+            .Include(e => e.Priority)
+            .Include(e => e.Manager)
+            .FirstOrDefaultAsync(e => e.ProjectId == en.ProjectId && !e.IsDeleted);
+
         return new ProjectDto
         {
-            ProjectId = entity.ProjectId,
-            StatusId = entity.StatusId,
-            ManagerId = entity.ManagerId,
-            PriorityId = entity.PriorityId,
-            ProjectName = entity.ProjectName,
-            Description = entity.Desc,
-            StartDate = entity.StartDate,
-            DueDate = entity.DueDate,
-            EndDate = entity.EndDate,
-            CreationDate = entity.CreationDate,
-            StatusName = entity.Status?.StatusName,
-            ManagerName = entity.Manager?.UserFullName,
-            PriorityName = entity.Priority?.PriorityName
+                ProjectId = entity.ProjectId,
+                StatusId = entity.StatusId,
+                ManagerId = entity.ManagerId,
+                PriorityId = entity.PriorityId,
+                ProjectName = entity.ProjectName,
+                Description = entity.Desc,
+                StartDate = entity.StartDate,
+                DueDate = entity.DueDate,
+                EndDate = entity.EndDate,
+                CreationDate = entity.CreationDate,
+                StatusName = entity.Status?.StatusName,
+                ManagerName = entity.Manager?.UserFullName,
+                PriorityName = entity.Priority?.PriorityName
         };
     }
 }

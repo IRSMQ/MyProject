@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Test26.Models;
-
 namespace Test26.Context;
 
 public partial class ProjectManagementSystemContext : DbContext
@@ -59,8 +58,6 @@ public partial class ProjectManagementSystemContext : DbContext
                 .HasColumnName("ChangeLogID");
             entity.Property(e => e.ColumnName).HasMaxLength(40);
             entity.Property(e => e.LogId).HasColumnName("LogID");
-            entity.Property(e => e.NewValue).HasMaxLength(100);
-            entity.Property(e => e.OldValue).HasMaxLength(100);
 
             entity.HasOne(d => d.Log).WithMany(p => p.ChangeLogs)
                 .HasForeignKey(d => d.LogId)
@@ -134,7 +131,9 @@ public partial class ProjectManagementSystemContext : DbContext
             entity.Property(e => e.ProjectId)
                 .HasDefaultValueSql("(newid())", "DF_Project_ProjectId")
                 .HasColumnName("ProjectID");
-            entity.Property(e => e.CreationDate).HasColumnType("datetime");
+            entity.Property(e => e.CreationDate)
+                .HasDefaultValueSql("(getdate())", "DF_Project_CreationDate")
+                .HasColumnType("datetime");
             entity.Property(e => e.DueDate).HasColumnType("datetime");
             entity.Property(e => e.EndDate)
                 .HasColumnType("datetime")

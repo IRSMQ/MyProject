@@ -114,14 +114,6 @@ public class RolePermissionController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> Put([FromBody] RPDtoAdd dto)
     {
-        // var entity = await _context.RolePermissions
-        //     .Include(e => e.Role)
-        //     .Include(e => e.Permission)
-        //     .FirstOrDefaultAsync(e => e.RoleId == dto.RoleId && e.PermissionId == dto.PermissionId && !e.IsDeleted);
-
-        //     if (entity != null)
-        //         throw new ArgumentException($"This permission available for this Role");
-
         var entity = new RolePermission();
 
         string message = string.Empty;
@@ -162,14 +154,19 @@ public class RolePermissionController : ControllerBase
             textLog = "Create";
         }
 
-        var newEntityDto = new RPDto
-        {
-            Rpid = entity.RolePermissionId,
-            RoleID = entity.RoleId,
-            PermissionID = entity.PermissionId,
-            RoleName = entity.Role.RoleName,
-            PermissionName = entity.Permission.PermissionName
-        };
+        var newEntityDto = await _context.RolePermissions
+            .Include(e => e.Role)
+            .Include(e => e.Permission)
+            .Where(e => e.RolePermissionId == entity.RolePermissionId && !e.IsDeleted)
+            .Select(e => new RPDto
+            {
+                Rpid = e.RolePermissionId,
+                RoleID = e.RoleId,
+                PermissionID = e.PermissionId,
+                RoleName = e.Role.RoleName,
+                PermissionName = e.Permission.PermissionName
+            })
+            .FirstOrDefaultAsync();
 
         var entry = _context.RolePermissions.Entry(entity);
 
@@ -186,6 +183,8 @@ public class RolePermissionController : ControllerBase
     public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.RolePermissions
+            .Include(e => e.Role)
+            .Include(e => e.Permission)
             .FirstOrDefaultAsync(e => e.RolePermissionId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Role Permission Not Found");
 

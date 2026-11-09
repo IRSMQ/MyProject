@@ -496,10 +496,6 @@ public class TaskManagementController : ControllerBase
     public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.TaskManagements
-            .Include(e => e.Project)
-            .Include(e => e.Status)
-            .Include(e => e.Priority)
-            .Include(e => e.Parent)
             .FirstOrDefaultAsync(e => e.TaskManagementId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Task Not Found");
 
@@ -526,7 +522,7 @@ public class TaskManagementController : ControllerBase
             .Include(e => e.Status)
             .Include(e => e.Priority)
             .Include(e => e.Parent)
-            .FirstOrDefaultAsync(e => e.TaskManagementId == id);
+            .FirstOrDefaultAsync(e => e.TaskManagementId == id && !e.IsDeleted);
             
         return new TaskManagementDto
         {

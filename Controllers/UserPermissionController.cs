@@ -46,10 +46,10 @@ public class UserPermissionController : ControllerBase
             })
             .ToListAsync();
 
-        if (entity.Count() > 0)
+        if (entity.Count() <= 0)
             throw new KeyNotFoundException("User Permission Empity");
 
-        return Ok(ApiResponse<List<UserPermissionDto>>.Success(entity,$"Get All Succeeded"));
+        return Ok(ApiResponse<List<UserPermissionDto>>.Success(entity, $"Get All Succeeded"));
     }
 
     [HttpGet]
@@ -194,7 +194,7 @@ public class UserPermissionController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<UserPermissionDto>.Success(entityDto,$"{message}"));
+        return Ok(ApiResponse<UserPermissionDto>.Success(entityDto, $"{message}"));
     }
 
     [Authorize(Policy = "UserPermission.Delete")]
@@ -202,6 +202,8 @@ public class UserPermissionController : ControllerBase
     public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.UserPermissions
+            .Include(e => e.Permission)
+            .Include(e => e.User)
             .FirstOrDefaultAsync(e => e.UserPermissionId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User Permission Not Found");
 
@@ -211,6 +213,7 @@ public class UserPermissionController : ControllerBase
 
         var newTU = new UserPermissionDto
         {
+            UserPermissionId = entity.UserPermissionId,
             PermissionId = entity.PermissionId,
             UserId = entity.UserId,
             PermissionName = entity.Permission.PermissionName,

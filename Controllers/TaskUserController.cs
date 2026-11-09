@@ -208,10 +208,16 @@ public class TaskUserController : ControllerBase
             text = "Create";
         }
 
+        var newEntity = await _context.TaskUsers
+            .Include(e => e.Task)
+            .Include(e => e.User)
+            .FirstOrDefaultAsync(e => e.TaskUserId == entity.TaskUserId && !e.IsDeleted);
+
+        tud.TaskUserId = entity.TaskUserId;
         tud.TaskId = entity.TaskId;
         tud.UserId = entity.UserId;
-        tud.TaskName = entity.Task.Title;
-        tud.UserName = entity.User.UserFullName;
+        tud.TaskName = newEntity?.Task.Title;
+        tud.UserName = newEntity?.User.UserFullName;
 
         var entry = _context.Entry(entity);
 
@@ -227,6 +233,8 @@ public class TaskUserController : ControllerBase
     public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.TaskUsers
+            .Include(e => e.Task)
+            .Include(e => e.User)
             .FirstOrDefaultAsync(e => e.TaskUserId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Task User Not Found");
 
@@ -236,6 +244,7 @@ public class TaskUserController : ControllerBase
 
         var newTU = new TaskUserDto
         {
+            TaskUserId = entity.TaskUserId,
             TaskId = entity.TaskId,
             UserId = entity.UserId,
             TaskName = entity.Task.Title,

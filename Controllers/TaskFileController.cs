@@ -153,7 +153,7 @@ public class TaskFileController : ControllerBase
         var entity = await _context.TaskDocuments
             .Include(e => e.Document)
             .Include(e => e.Task)
-            .FirstOrDefaultAsync(e => e.DocumentId == dto.ID && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.TaskDocumentId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Task Document Not Found");
 
         entity.IsDeleted = true;
@@ -164,6 +164,8 @@ public class TaskFileController : ControllerBase
         {
             DocumentId = entity.DocumentId,
         };
+
+        await _context.SaveChangesAsync();
 
         return Ok(new {entity.TaskDocumentId, entity.TaskId, entity.DocumentId, entity.Task.Title, entity.Document.FileName});
     }

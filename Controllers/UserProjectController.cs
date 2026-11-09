@@ -181,6 +181,7 @@ public class UserProjectController : ControllerBase
 
         var newUserProjectDto = new UserProjectDto
         {
+            UserProjectId = entity.UserProjectId,
             UserId = entity.UserId,
             ProjectId = entity.ProjectId,
             UserName = entityUser?.UserFullName ?? "null",

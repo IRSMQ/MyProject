@@ -34,6 +34,7 @@ public class FileController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var entity = await _context.Documents
+            .Where(e => !e.IsDeleted)
             .ToListAsync();
 
         return Ok(ApiResponse<List<Models.Document>>.Success(entity, "Get All Succeeded"));
@@ -120,12 +121,14 @@ public class FileController : ControllerBase
     public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.Documents
-            .FindAsync(dto.ID)
+            .FirstOrDefaultAsync(e => e.DocumentId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("File Not Found");
 
         entity.IsDeleted = true;
 
         await _logService.Log("Delete", nameof(Models.Document), entity.DocumentId);
+
+        await _context.SaveChangesAsync();
 
         return Ok($"File Deleted\nID: {entity.DocumentId}");
     }
