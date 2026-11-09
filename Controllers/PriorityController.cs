@@ -119,10 +119,10 @@ public class PriorityController : ControllerBase
 
     [Authorize(Policy = "Priority.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.Priorities
-            .FirstOrDefaultAsync(e => e.PriorityId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.PriorityId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException($"Priority Not Found");
 
         entity.IsDeleted = true;
@@ -132,7 +132,7 @@ public class PriorityController : ControllerBase
         /////////////////////////////////////////////////////////
 
         var entityProject = await _context.Projects
-            .Where(e => e.PriorityId == id && !e.IsDeleted)
+            .Where(e => e.PriorityId == dto.ID && !e.IsDeleted)
             .ToListAsync();
 
         foreach (var e in entityProject)
@@ -145,7 +145,7 @@ public class PriorityController : ControllerBase
         /////////////////////////////////////////////////////////
 
         var entityTaskManagement = await _context.TaskManagements
-            .Where(e => e.PriorityId == id && !e.IsDeleted)
+            .Where(e => e.PriorityId == dto.ID && !e.IsDeleted)
             .ToListAsync();
 
         foreach (var e in entityTaskManagement)

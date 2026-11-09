@@ -117,10 +117,10 @@ public class FileController : ControllerBase
 
     [Authorize(Policy = "File.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.Documents
-            .FindAsync(id)
+            .FindAsync(dto.ID)
             ?? throw new KeyNotFoundException("File Not Found");
 
         entity.IsDeleted = true;

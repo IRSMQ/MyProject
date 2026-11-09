@@ -246,10 +246,10 @@ public class ProjectController : ControllerBase
 
     [Authorize(Policy = "Project.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.Projects
-            .FirstOrDefaultAsync(e => e.ProjectId == id && !e.IsDeleted);
+            .FirstOrDefaultAsync(e => e.ProjectId == dto.ID && !e.IsDeleted);
 
         if (entity == null)
             throw new KeyNotFoundException($"Project Not Found");
@@ -261,7 +261,7 @@ public class ProjectController : ControllerBase
         /////////////////////////////////////////////////////////
         
         var entityUserProject = await _context.UserProjects
-            .Where(e => e.ProjectId == id && !e.IsDeleted)
+            .Where(e => e.ProjectId == dto.ID && !e.IsDeleted)
             .ToListAsync();
 
         if (entityUserProject.Count() > 0)
@@ -276,7 +276,7 @@ public class ProjectController : ControllerBase
         /////////////////////////////////////////////////////////
         
         var entityTaskManagement = await _context.TaskManagements
-            .Where(e => e.ProjectId == id && !e.IsDeleted)
+            .Where(e => e.ProjectId == dto.ID && !e.IsDeleted)
             .ToListAsync();
 
         if (entityTaskManagement.Count() > 0)

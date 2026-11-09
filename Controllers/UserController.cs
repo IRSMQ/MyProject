@@ -117,7 +117,7 @@ public class UserController : ControllerBase
 
             if (!string.IsNullOrEmpty(dto.UserPassword) && entity.UserPassword != PasswordHassherHandler.Hash(dto.UserPassword))
                 entity.UserPassword = PasswordHassherHandler.Hash(dto.UserPassword);
-            
+
             message = "Edit Succeeded";
             text = "Edit";
         }
@@ -136,8 +136,9 @@ public class UserController : ControllerBase
                 UserEmail = dto.UserEmail,
                 UserPhone = dto.UserPhone
             };
+            await _context.Users.AddAsync(entity);
 
-            message = "Add Succeeded";
+            message = "Create Succeeded";
             text = "Create";
         }
 
@@ -199,10 +200,10 @@ public class UserController : ControllerBase
 
     [Authorize(Policy = "User.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.Users
-            .FirstOrDefaultAsync(e => e.UserId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.UserId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User not Found");
 
 

@@ -126,17 +126,17 @@ public class RoleController : ControllerBase
 
     [Authorize(Policy = "Role.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.Roles
-            .FirstOrDefaultAsync(e => e.RoleId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.RoleId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException($"Role Not Found");
 
 
         /////////////////////////////////////////////////////////
         
         var entityUser = await _context.Users
-            .Where(e => e.RoleId == id && !e.IsDeleted)
+            .Where(e => e.RoleId == dto.ID && !e.IsDeleted)
             .ToListAsync();
 
         foreach (var e in entityUser)
@@ -149,7 +149,7 @@ public class RoleController : ControllerBase
         /////////////////////////////////////////////////////////
         
         var entityRolePermission = await _context.RolePermissions
-            .Where(e => e.RoleId == id && !e.IsDeleted)
+            .Where(e => e.RoleId == dto.ID && !e.IsDeleted)
             .ToListAsync();
 
         foreach (var e in entityRolePermission)

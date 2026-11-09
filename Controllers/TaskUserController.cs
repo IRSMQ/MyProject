@@ -224,10 +224,10 @@ public class TaskUserController : ControllerBase
 
     [Authorize(Policy = "TaskUser.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.TaskUsers
-            .FirstOrDefaultAsync(e => e.TaskUserId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.TaskUserId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Task User Not Found");
 
         entity.IsDeleted = true;

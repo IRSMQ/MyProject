@@ -493,18 +493,18 @@ public class TaskManagementController : ControllerBase
 
     [Authorize(Policy = "TaskManagement.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.TaskManagements
             .Include(e => e.Project)
             .Include(e => e.Status)
             .Include(e => e.Priority)
             .Include(e => e.Parent)
-            .FirstOrDefaultAsync(e => e.TaskManagementId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.TaskManagementId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Task Not Found");
 
         var exist = await _context.TaskManagements
-            .AnyAsync(e => e.ParentId == id);
+            .AnyAsync(e => e.ParentId == dto.ID);
 
         if (exist)
             throw new ArgumentException("This task has a sub-task");

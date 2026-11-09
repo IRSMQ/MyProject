@@ -183,10 +183,10 @@ public class RolePermissionController : ControllerBase
 
     [Authorize(Policy = "RolePermission.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.RolePermissions
-            .FirstOrDefaultAsync(e => e.RolePermissionId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.RolePermissionId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Role Permission Not Found");
 
         entity.IsDeleted = true;

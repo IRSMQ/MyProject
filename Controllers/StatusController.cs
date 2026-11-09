@@ -132,17 +132,17 @@ public class StatusController : ControllerBase
 
     [Authorize(Policy = "Status.Delete")]
     [HttpDelete]
-    public async Task<ActionResult<StatusDto>> Delete([FromBody] Guid id)
+    public async Task<ActionResult<StatusDto>> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.Statuses
-            .FirstOrDefaultAsync(e => e.StatusId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.StatusId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException($"Status Not Found");
 
 
         /////////////////////////////////////////////////////////
         
         var entityProject = await _context.Projects
-            .Where(e => e.StatusId == id && !e.IsDeleted)
+            .Where(e => e.StatusId == dto.ID && !e.IsDeleted)
             .ToListAsync();
 
         if (entityProject.Count() > 0)
@@ -158,7 +158,7 @@ public class StatusController : ControllerBase
         /////////////////////////////////////////////////////////
         
         var entityTaskManagement = await _context.TaskManagements
-            .Where(e => e.StatusId == id && !e.IsDeleted)
+            .Where(e => e.StatusId == dto.ID && !e.IsDeleted)
             .ToListAsync();
 
         if (entityTaskManagement.Count() > 0)

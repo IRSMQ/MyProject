@@ -198,12 +198,12 @@ public class UserProjectController : ControllerBase
 
     [Authorize(Policy = "UserProject.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.UserProjects
             .Include(e => e.Project)
             .Include(e => e.User)
-            .FirstOrDefaultAsync(e => e.UserProjectId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.UserProjectId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User Project Not Found");
 
         entity.IsDeleted = true;

@@ -125,10 +125,10 @@ public class PermissionController : ControllerBase
 
     [Authorize(Policy = "Permission.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.Permissions
-            .FirstOrDefaultAsync(e => e.PermissionId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.PermissionId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException($"Permission Not Found");
 
         entity.IsDeleted = true;
@@ -138,7 +138,7 @@ public class PermissionController : ControllerBase
 
         /////////////////////////////////////////////////////////
         var entityRolePermission = await _context.RolePermissions
-            .Where(e => e.PermissionId == id && !e.IsDeleted)
+            .Where(e => e.PermissionId == dto.ID && !e.IsDeleted)
             .ToListAsync();
 
         foreach (var e in entityRolePermission)
@@ -150,7 +150,7 @@ public class PermissionController : ControllerBase
 
         /////////////////////////////////////////////////////////
         var entityUserPermission = await _context.UserPermissions
-            .Where(e => e.PermissionId == id && !e.IsDeleted)
+            .Where(e => e.PermissionId == dto.ID && !e.IsDeleted)
             .ToListAsync();
 
         foreach (var e in entityUserPermission)
@@ -161,7 +161,7 @@ public class PermissionController : ControllerBase
 
         var newEntity = new PermissionDto
         {
-            PermissionId = id,
+            PermissionId = dto.ID,
             PermissionName = entity.PermissionName
         };
 

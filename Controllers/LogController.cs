@@ -73,18 +73,18 @@ public class LogController : ControllerBase
 
     [Authorize(Policy = "Log.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.Logs
-            .FirstOrDefaultAsync(e => e.LogId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.LogId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("There are no Change Log with this ID");
 
         entity.IsDeleted = true;
 
-        await _logService.Log("Delete", nameof(Log), id);
+        await _logService.Log("Delete", nameof(Log), dto.ID);
 
         var entityChangeLog = await _context.ChangeLogs
-            .Where(e => e.LogId == id && !e.IsDeleted)
+            .Where(e => e.LogId == dto.ID && !e.IsDeleted)
             .ToListAsync();
 
         foreach (var e in entityChangeLog)

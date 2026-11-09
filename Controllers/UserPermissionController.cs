@@ -199,10 +199,10 @@ public class UserPermissionController : ControllerBase
 
     [Authorize(Policy = "UserPermission.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.UserPermissions
-            .FirstOrDefaultAsync(e => e.UserPermissionId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.UserPermissionId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("User Permission Not Found");
 
         entity.IsDeleted = true;

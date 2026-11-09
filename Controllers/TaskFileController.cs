@@ -148,12 +148,12 @@ public class TaskFileController : ControllerBase
 
     [Authorize(Policy = "TaskFile.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromQuery] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.TaskDocuments
             .Include(e => e.Document)
             .Include(e => e.Task)
-            .FirstOrDefaultAsync(e => e.DocumentId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.DocumentId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("Task Document Not Found");
 
         entity.IsDeleted = true;

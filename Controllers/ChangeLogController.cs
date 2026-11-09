@@ -93,10 +93,10 @@ public class ChangeLogController : ControllerBase
 
     [Authorize(Policy = "ChangeLog.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromBody] DeleteID dto)
     {
         var entity = await _context.ChangeLogs
-            .FirstOrDefaultAsync(e => e.ChangeLogId == id && !e.IsDeleted)
+            .FirstOrDefaultAsync(e => e.ChangeLogId == dto.ID && !e.IsDeleted)
             ?? throw new KeyNotFoundException("There are no Change Log with this ID");
 
         entity.IsDeleted = true;
