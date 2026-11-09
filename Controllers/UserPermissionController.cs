@@ -16,19 +16,16 @@ public class UserPermissionController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    private readonly TokenService _tokenService;
     private readonly IAuthorizationService _authorizationService;
 
     public UserPermissionController(
         ProjectManagementSystemContext context,
         LogService logService,
-        TokenService tokenService,
         IAuthorizationService authorizationService
         )
     {
         _context = context;
         _logService = logService;
-        _tokenService = tokenService;
         _authorizationService = authorizationService;
     }
 

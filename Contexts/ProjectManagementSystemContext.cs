@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Test26.Models;
+
 namespace Test26.Context;
 
 public partial class ProjectManagementSystemContext : DbContext
@@ -134,7 +135,6 @@ public partial class ProjectManagementSystemContext : DbContext
                 .HasDefaultValueSql("(newid())", "DF_Project_ProjectId")
                 .HasColumnName("ProjectID");
             entity.Property(e => e.CreationDate).HasColumnType("datetime");
-            entity.Property(e => e.Desc).HasMaxLength(500);
             entity.Property(e => e.DueDate).HasColumnType("datetime");
             entity.Property(e => e.EndDate)
                 .HasColumnType("datetime")
@@ -235,7 +235,6 @@ public partial class ProjectManagementSystemContext : DbContext
             entity.Property(e => e.CreationDate)
                 .HasDefaultValueSql("(getdate())", "DF_TaskManagement_CreationDate")
                 .HasColumnType("datetime");
-            entity.Property(e => e.Desc).HasMaxLength(500);
             entity.Property(e => e.DueDate).HasColumnType("datetime");
             entity.Property(e => e.ParentId).HasColumnName("ParentID");
             entity.Property(e => e.PriorityId).HasColumnName("PriorityID");
@@ -321,9 +320,7 @@ public partial class ProjectManagementSystemContext : DbContext
             entity.Property(e => e.UserPermissionId)
                 .HasDefaultValueSql("(newid())", "DF_UserPermission_UserPermissionID")
                 .HasColumnName("UserPermissionID");
-            entity.Property(e => e.Bit)
-                .HasDefaultValue(true, "DF_UserPermission_bit")
-                .HasColumnName("bit");
+            entity.Property(e => e.Bit).HasDefaultValue(true, "DF_UserPermission_bit");
             entity.Property(e => e.PermissionId).HasColumnName("PermissionID");
             entity.Property(e => e.UserId).HasColumnName("UserID");
 

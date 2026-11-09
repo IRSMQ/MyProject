@@ -96,7 +96,7 @@ public class TaskManagementController : ControllerBase
             .FirstOrDefaultAsync(e => e.TaskManagementId == id && !e.IsDeleted)
             ?? throw new KeyNotFoundException($"Task Not Found");
 
-        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Get By ID Succeeded"));
+        return Ok(ApiResponse<TaskManagementDto>.Success(await TaskToDto(entity.TaskManagementId), $"Get By ID Succeeded"));
     }
 
     [Authorize]
@@ -213,9 +213,13 @@ public class TaskManagementController : ControllerBase
 
             if (!string.IsNullOrEmpty(dto.Title))
                 entity.Title = dto.Title;
+            else
+                throw new ArgumentException("Title Cannot Be Empty");
 
             if (!string.IsNullOrEmpty(dto.Desc))
                 entity.Desc = dto.Desc;
+
+            entity.TaskManagementId = Guid.NewGuid();
 
             await _context.TaskManagements.AddAsync(entity);
 
@@ -223,11 +227,13 @@ public class TaskManagementController : ControllerBase
             textLog = "Create";
         }
 
-        var newEntity = TaskToDto(entity);
+        var entry = _context.Entry(entity);
+
+        await _logService.Log(textLog, nameof(TaskManagement), entity.TaskManagementId, entry);
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<TaskManagementDto>.Success(newEntity,$"Succeeded"));
+        return Ok(ApiResponse<TaskManagementDto>.Success(await TaskToDto(entity.TaskManagementId), $"{message}"));
     }
 
     [Authorize(Policy = "TaskManagement.Status.Edit")]
@@ -259,7 +265,7 @@ public class TaskManagementController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Status Succeeded"));
+        return Ok(ApiResponse<TaskManagementDto>.Success(await TaskToDto(entity.TaskManagementId), $"Edit Status Succeeded"));
     }
 
     [Authorize(Policy = "TaskManagement.Priority.Edit")]
@@ -284,7 +290,7 @@ public class TaskManagementController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Priority Succeeded"));
+        return Ok(ApiResponse<TaskManagementDto>.Success(await TaskToDto(entity.TaskManagementId), $"Edit Priority Succeeded"));
     }
 
     [Authorize(Policy = "TaskManagement.Parent.Edit")]
@@ -343,7 +349,7 @@ public class TaskManagementController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Parent Succeeded"));
+        return Ok(ApiResponse<TaskManagementDto>.Success(await TaskToDto(entity.TaskManagementId), $"Edit Parent Succeeded"));
     }
 
     [Authorize(Policy = "TaskManagement.Title.Edit")]
@@ -377,7 +383,7 @@ public class TaskManagementController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Title Succeeded"));
+        return Ok(ApiResponse<TaskManagementDto>.Success(await TaskToDto(entity.TaskManagementId),$"Edit Title Succeeded"));
     }
 
     [Authorize(Policy = "TaskManagement.Desc.Edit")]
@@ -396,7 +402,7 @@ public class TaskManagementController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Desc Succeeded"));
+        return Ok(ApiResponse<TaskManagementDto>.Success(await TaskToDto(entity.TaskManagementId),$"Edit Desc Succeeded"));
     }
 
     [Authorize(Policy = "TaskManagement.Date.Edit")]
@@ -482,7 +488,7 @@ public class TaskManagementController : ControllerBase
         
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Edit Date Succeeded"));
+        return Ok(ApiResponse<TaskManagementDto>.Success(await TaskToDto(entity.TaskManagementId),$"Edit Date Succeeded"));
     }
 
     [Authorize(Policy = "TaskManagement.Delete")]
@@ -509,31 +515,38 @@ public class TaskManagementController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<TaskManagementDto>.Success(TaskToDto(entity),$"Delete Succeeded"));
+        return Ok(ApiResponse<TaskManagementDto>.Success(await TaskToDto(entity.TaskManagementId), $"Delete Succeeded"));
     }
 
 
-    private TaskManagementDto TaskToDto(TaskManagement taskManagement)
+    private async Task<TaskManagementDto> TaskToDto(Guid id)
     {
+        var entity = await _context.TaskManagements
+            .Include(e => e.Project)
+            .Include(e => e.Status)
+            .Include(e => e.Priority)
+            .Include(e => e.Parent)
+            .FirstOrDefaultAsync(e => e.TaskManagementId == id);
+            
         return new TaskManagementDto
         {
-            TaskManagementId = taskManagement.TaskManagementId,
-            ProjectId = taskManagement.ProjectId,
-            StatusId = taskManagement.StatusId,
-            PriorityId = taskManagement.PriorityId,
-            ParentId = taskManagement.ParentId,
+            TaskManagementId = entity.TaskManagementId,
+            ProjectId = entity.ProjectId,
+            StatusId = entity.StatusId,
+            PriorityId = entity.PriorityId,
+            ParentId = entity.ParentId,
 
-            ProjectName = taskManagement.Project.ProjectName,
-            StatusName = taskManagement.Status?.StatusName,
-            PriorityName = taskManagement.Priority?.PriorityName,
-            ParentName = taskManagement.Parent?.Title,
+            ProjectName = entity.Project.ProjectName,
+            StatusName = entity.Status?.StatusName,
+            PriorityName = entity.Priority?.PriorityName,
+            ParentName = entity.Parent?.Title,
 
-            Title = taskManagement.Title,
-            Desc = taskManagement.Desc,
-            CreationDate = taskManagement.CreationDate,
-            StartDate = taskManagement.StartDate,
-            DueDate = taskManagement.DueDate,
-            CompletionDate = taskManagement.CompletionDate
+            Title = entity.Title,
+            Desc = entity.Desc,
+            CreationDate = entity.CreationDate,
+            StartDate = entity.StartDate,
+            DueDate = entity.DueDate,
+            CompletionDate = entity.CompletionDate
         };
     }
 

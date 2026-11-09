@@ -16,19 +16,16 @@ public class UserProjectController : ControllerBase
 {
     private readonly ProjectManagementSystemContext _context;
     private readonly LogService _logService;
-    private readonly TokenService _tokenService;
     private readonly IAuthorizationService _authorizationService;
 
     public UserProjectController(
         ProjectManagementSystemContext context,
         LogService logService,
-        TokenService tokenService,
         IAuthorizationService authorizationService
         )
     {
         _context = context;
         _logService = logService;
-        _tokenService = tokenService;
         _authorizationService = authorizationService;
     }
 
@@ -203,21 +200,6 @@ public class UserProjectController : ControllerBase
     [HttpDelete]
     public async Task<IActionResult> Delete([FromBody] Guid id)
     {
-        var tokenUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Token User Is Null"));
-        var tokenRoleName = User.FindFirstValue(ClaimTypes.Role);
-
-        Guid tokenRoleId;
-
-        if (!string.IsNullOrEmpty(tokenRoleName))
-            tokenRoleId = Guid.Parse(tokenRoleName);
-        else
-            throw new UnauthorizedAccessException("Token Role Is Null");
-
-        await _tokenService.CheckToken(tokenUserId, tokenRoleId, "DeleteUserProject");
-
-        //////////////////////////////////////////////////////////////////////
-        
-
         var entity = await _context.UserProjects
             .Include(e => e.Project)
             .Include(e => e.User)
@@ -238,6 +220,6 @@ public class UserProjectController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<UserProjectDto>.Success(newTU,$"Delete Succeeded"));
+        return Ok(ApiResponse<UserProjectDto>.Success(newTU, $"Delete Succeeded"));
     }
 }

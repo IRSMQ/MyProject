@@ -27,22 +27,25 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
         var roleId = Guid.Parse(roleIdClaim);
 
         var entityRole = await _context.Roles
-            .FirstOrDefaultAsync(e => e.RoleId == roleId);
+            .AnyAsync(e => e.RoleId == roleId && e.RoleName == "Manager");
 
-        if (entityRole == null)
-            return;
-
-        if (entityRole.RoleName == "Manager")
+        if (entityRole)
         {
             context.Succeed(requirement);
             return;
         }
 
         var userPermission = await _context.UserPermissions
-            .FirstOrDefaultAsync(e => e.UserId == userId
+            .Where(e => e.UserId == userId
                                 && e.Permission.PermissionName == requirement.Permission
                                 && !e.IsDeleted
-                                );
+            )
+            .Select(
+                e => new
+                {
+                    Bit = e.Bit
+                }
+            ).FirstOrDefaultAsync();
 
         if (userPermission != null)
         {
@@ -55,7 +58,7 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
             .AnyAsync(e => e.RoleId == roleId
                     && e.Permission.PermissionName == requirement.Permission
                     && !e.IsDeleted
-                    );
+            );
 
         if (hasRolePermission)
             context.Succeed(requirement);

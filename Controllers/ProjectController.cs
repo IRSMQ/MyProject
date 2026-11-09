@@ -103,8 +103,7 @@ public class ProjectController : ControllerBase
 
         if (dto.ProjectId.HasValue)
         {
-            var result = await _authorizationService.AuthorizeAsync(User, "Project.Edit");
-            if (!result.Succeeded)
+            if (!(await _authorizationService.AuthorizeAsync(User, "Project.Edit")).Succeeded)
                 return Forbid();
 
             entity = await _context.Projects
@@ -125,7 +124,11 @@ public class ProjectController : ControllerBase
                     .FirstOrDefaultAsync(e => e.UserId == dto.ManagerId && !e.IsDeleted)
                     ?? throw new KeyNotFoundException("Manager Not Found");
 
-                await _tokenService.CheckToken(entityUser.UserId, entityUser.RoleId, "ProjectManager");
+                if (!(await _authorizationService.AuthorizeAsync(User, "ProjectManager")).Succeeded)
+                    throw new ArgumentException("This User Not Project Manager");
+                    // return Forbid();
+
+                // await _tokenService.CheckToken(entityUser.UserId, entityUser.RoleId, "ProjectManager");
 
                 entity.ManagerId = dto.ManagerId.Value;
             }
@@ -197,7 +200,7 @@ public class ProjectController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity), $"Add Succeeded"));
+        return Ok(ApiResponse<ProjectDto>.Success(ProjectToDto(entity), $"{message}"));
     }
 
     [Authorize(Policy = "Project.Date.Edit")]
@@ -243,7 +246,7 @@ public class ProjectController : ControllerBase
 
     [Authorize(Policy = "Project.Delete")]
     [HttpDelete]
-    public async Task<IActionResult> Delete([FromBody] Guid id)
+    public async Task<IActionResult> Delete([FromQuery] Guid id)
     {
         var entity = await _context.Projects
             .FirstOrDefaultAsync(e => e.ProjectId == id && !e.IsDeleted);

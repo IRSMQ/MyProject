@@ -6,15 +6,15 @@ namespace Test26.DTOs;
 
 public partial class TaskManagementDto
 {
-    public Guid TaskManagementId { get; set; }
-    public Guid ProjectId { get; set; }
+    public Guid? TaskManagementId { get; set; }
+    public Guid? ProjectId { get; set; }
     public Guid? StatusId { get; set; }
     public Guid? PriorityId { get; set; }
     public Guid? ParentId { get; set; }
     public Guid? FileId { get; set; }
 
-    public string Title { get; set; } = null!;
-    public string ProjectName { get; set; } = null!;
+    public string? Title { get; set; } = null!;
+    public string? ProjectName { get; set; } = null!;
     public string? UserFullName { get; set; }
     public string? StatusName { get; set; }
     public string? PriorityName { get; set; }
