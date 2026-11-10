@@ -222,6 +222,6 @@ public class UserPermissionController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<UserPermissionDto>.Success(newTU,$"Delete Succeeded"));
+        return Ok(ApiResponse<UserPermissionDto>.Success(newTU, $"Delete Succeeded"));
     }
 }

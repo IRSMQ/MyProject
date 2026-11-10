@@ -105,6 +105,6 @@ public class LogController : ControllerBase
         
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<LogDto>.Success(newEntity,$"Delete Succeeded"));
+        return Ok(ApiResponse<LogDto>.Success(newEntity, $"Delete Succeeded"));
     }
 }

@@ -253,6 +253,6 @@ public class TaskUserController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<TaskUserDto>.Success(newTU,$"Delete Succeeded"));
+        return Ok(ApiResponse<TaskUserDto>.Success(newTU, $"Delete Succeeded"));
     }
 }
