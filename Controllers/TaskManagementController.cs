@@ -522,11 +522,11 @@ public class TaskManagementController : ControllerBase
             .Include(e => e.Status)
             .Include(e => e.Priority)
             .Include(e => e.Parent)
-            .FirstOrDefaultAsync(e => e.TaskManagementId == id && !e.IsDeleted);
+            .FirstOrDefaultAsync(e => e.TaskManagementId == id);
             
         return new TaskManagementDto
         {
-            TaskManagementId = entity.TaskManagementId,
+            TaskManagementId = entity!.TaskManagementId,
             ProjectId = entity.ProjectId,
             StatusId = entity.StatusId,
             PriorityId = entity.PriorityId,

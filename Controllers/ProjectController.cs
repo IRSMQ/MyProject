@@ -300,6 +300,8 @@ public class ProjectController : ControllerBase
             }
         }
 
+
+
         await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<ProjectDto>.Success(await ProjectToDto(entity), $"Delete Succeeded"));
@@ -312,11 +314,11 @@ public class ProjectController : ControllerBase
             .Include(e => e.Status)
             .Include(e => e.Priority)
             .Include(e => e.Manager)
-            .FirstOrDefaultAsync(e => e.ProjectId == en.ProjectId && !e.IsDeleted);
+            .FirstOrDefaultAsync(e => e.ProjectId == en.ProjectId);
 
         return new ProjectDto
         {
-                ProjectId = entity.ProjectId,
+                ProjectId = entity!.ProjectId,
                 StatusId = entity.StatusId,
                 ManagerId = entity.ManagerId,
                 PriorityId = entity.PriorityId,
