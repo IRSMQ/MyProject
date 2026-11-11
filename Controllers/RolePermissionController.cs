@@ -174,7 +174,7 @@ public class RolePermissionController : ControllerBase
         
         await _context.SaveChangesAsync();
 
-        return Ok(ApiResponse<RPDto>.Success(newEntityDto, $"{message}"));
+        return Ok(ApiResponse<RPDto>.Success(newEntityDto!, $"{message}"));
     }
 
 

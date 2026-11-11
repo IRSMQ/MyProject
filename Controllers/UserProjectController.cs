@@ -134,50 +134,46 @@ public class UserProjectController : ControllerBase
                 ?? throw new KeyNotFoundException("User Project ID Not Found");
 
             if (entity.UserId == dto.UserId && entity.ProjectId == dto.ProjectId)
-            {
                 message = "User Project Exist";
-            }
+
             else
             {
                 if (entity.ProjectId != dto.ProjectId && dto.ProjectId.HasValue)
-                {
                     entity.ProjectId = dto.ProjectId.Value;
-                }
 
                 if (entity.UserId != dto.UserId && dto.UserId.HasValue)
-                {
                     entity.UserId = dto.UserId.Value;
-                }
 
                 entity.ProjectId = entity.ProjectId;
                 entity.UserId = entity.UserId;
+
                 message = "Edit Succeeded";
                 text = "Edit";
             }
-        
         }
         else
         {
             if (!(await _authorizationService.AuthorizeAsync(User, "UserProject.Create")).Succeeded)
                 return Forbid();
 
-            var newTU = new UserProject
-            {
-                UserProjectId = Guid.NewGuid(),
-                ProjectId = dto.ProjectId!.Value,
-                UserId = dto.UserId!.Value
-            };
+            if (dto.ProjectId == null || dto.UserId == null)
+                throw new ArgumentException("Project ID or User ID is null");
 
-            entity.ProjectId = newTU.ProjectId;
-            entity.UserId = newTU.UserId;
+            entity.UserProjectId = Guid.NewGuid();
+            entity.ProjectId = dto.ProjectId!.Value;
+            entity.UserId = dto.UserId!.Value;
+            
+            await _context.UserProjects.AddAsync(entity);
+
             message = "Add Succeeded";
             text = "Create";
         }
 
-        await _context.UserProjects.AddAsync(entity);
+        var entityUser = await _context.Users
+            .FindAsync(entity.UserId);
 
-        var entityUser = await _context.Users.FindAsync(entity.UserId);
-        var entityProject = await _context.Projects.FindAsync(entity.ProjectId);
+        var entityProject = await _context.Projects
+            .FindAsync(entity.ProjectId);
 
         var newUserProjectDto = new UserProjectDto
         {

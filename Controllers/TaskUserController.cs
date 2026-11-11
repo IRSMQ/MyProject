@@ -192,9 +192,14 @@ public class TaskUserController : ControllerBase
 
             // if (check)
             //     throw new ArgumentException("This User Is Not In This Project");
+
             if (dto.TaskId == null || dto.UserId == null)
                 throw new ArgumentException("Task ID or User ID is Null");
                 
+
+            
+
+
             entity = new TaskUser
             {
                 TaskUserId = Guid.NewGuid(),
